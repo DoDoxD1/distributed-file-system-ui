@@ -59,3 +59,42 @@ export const extractParentFolder = (logicalPath: string): string => {
 
   return normalizedPath.slice(0, lastSlashIndex);
 };
+
+export interface FolderNode {
+  name: string;
+  path: string;
+  children: FolderNode[];
+  files: import('../models/api.models').FileListingResponse[];
+}
+
+export const buildFolderTree = (
+  allFiles: import('../models/api.models').FileListingResponse[]
+): FolderNode => {
+  const root: FolderNode = { name: '/', path: '/', children: [], files: [] };
+
+  const getOrCreateFolder = (segments: string[], parent: FolderNode, builtPath: string): FolderNode => {
+    if (segments.length === 0) {
+      return parent;
+    }
+
+    const [head, ...tail] = segments;
+    const childPath = `${builtPath === '/' ? '' : builtPath}/${head}`;
+    let child = parent.children.find((c) => c.name === head);
+
+    if (!child) {
+      child = { name: head, path: childPath, children: [], files: [] };
+      parent.children.push(child);
+    }
+
+    return getOrCreateFolder(tail, child, childPath);
+  };
+
+  for (const file of allFiles) {
+    const segments = file.logicalPath.split('/').filter(Boolean);
+    const folderSegments = segments.slice(0, -1);
+    const folder = getOrCreateFolder(folderSegments, root, '/');
+    folder.files.push(file);
+  }
+
+  return root;
+};

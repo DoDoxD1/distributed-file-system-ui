@@ -1,5 +1,5 @@
 ﻿import { CommonModule } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
@@ -9,7 +9,9 @@ import { FilesService } from '../../../core/services/files.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { encodePathToBase64Url } from '../../../core/utils/encoding.util';
 import {
+  type FolderNode as FolderNodeType,
   base64ToBlob,
+  buildFolderTree,
   extractFileName,
   extractParentFolder,
   fileToBase64,
@@ -22,6 +24,10 @@ import { DropzoneComponent } from '../../../shared/components/dropzone/dropzone.
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { InlineAlertComponent } from '../../../shared/components/inline-alert/inline-alert.component';
 import { LoadingStateComponent } from '../../../shared/components/loading-state/loading-state.component';
+
+type TreeEntry =
+  | { kind: 'folder'; node: FolderNodeType; depth: number }
+  | { kind: 'file'; file: FileListingResponse; depth: number };
 
 @Component({
   selector: 'app-files-dashboard-page',
@@ -52,6 +58,33 @@ export class FilesDashboardPageComponent {
   });
 
   protected readonly files = signal<FileListingResponse[]>([]);
+  protected readonly expandedFolders = signal<ReadonlySet<string>>(new Set<string>());
+
+  protected readonly treeEntries = computed(() => {
+    const expanded = this.expandedFolders();
+    const root = buildFolderTree(this.files());
+    const entries: TreeEntry[] = [];
+
+    const walk = (node: FolderNodeType, depth: number): void => {
+      for (const child of node.children) {
+        entries.push({ kind: 'folder', node: child, depth });
+        if (expanded.has(child.path)) {
+          walk(child, depth + 1);
+          for (const file of child.files) {
+            entries.push({ kind: 'file', file, depth: depth + 1 });
+          }
+        }
+      }
+      if (node === root) {
+        for (const file of node.files) {
+          entries.push({ kind: 'file', file, depth });
+        }
+      }
+    };
+
+    walk(root, 0);
+    return entries;
+  });
   protected readonly selectedFile = signal<FileListingResponse | null>(null);
   protected readonly selectedManifest = signal<FileManifestResponse | null>(null);
   protected readonly selectedUploadFile = signal<File | null>(null);
@@ -185,6 +218,22 @@ export class FilesDashboardPageComponent {
       const message = getErrorMessage(error, 'The file could not be downloaded.');
       this.toast.error('Download failed', message);
     }
+  }
+
+  protected toggleFolder(path: string): void {
+    this.expandedFolders.update((current) => {
+      const next = new Set(current);
+      if (next.has(path)) {
+        next.delete(path);
+      } else {
+        next.add(path);
+      }
+      return next;
+    });
+  }
+
+  protected isFolderExpanded(path: string): boolean {
+    return this.expandedFolders().has(path);
   }
 
   protected openDetails(logicalPath: string): void {
