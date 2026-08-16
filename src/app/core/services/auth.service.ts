@@ -29,11 +29,13 @@ export class AuthService {
   async initialize(): Promise<void> {
     const storedSession = this.readStoredSession();
 
-    if (storedSession) {
-      this.sessionState.set(storedSession);
+    if (!storedSession) {
+      this.readyState.set(true);
+      return;
     }
 
-    if (storedSession && !this.isExpired(storedSession.expiresAt)) {
+    if (!this.isExpired(storedSession.expiresAt)) {
+      this.sessionState.set(storedSession);
       this.readyState.set(true);
       return;
     }

@@ -55,6 +55,14 @@ describe('AuthService', () => {
     await service.initialize();
   }
 
+  it('does not call refresh during initialization when there is no stored session', async () => {
+    await service.initialize();
+
+    httpController.expectNone(api.endpoint('/auth/refresh'));
+    expect(service.isReady()).toBeTrue();
+    expect(service.isAuthenticated()).toBeFalse();
+  });
+
   it('logs out successfully by calling the backend, clearing auth state, and redirecting', async () => {
     await initializeAuthenticatedSession();
 

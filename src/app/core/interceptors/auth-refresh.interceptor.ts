@@ -1,5 +1,6 @@
 import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
+import { Router } from '@angular/router';
 import { catchError, switchMap, throwError } from 'rxjs';
 
 import { AuthService } from '../services/auth.service';
@@ -9,6 +10,7 @@ import { HAS_RETRIED, SKIP_REFRESH } from '../utils/http-context.util';
 export const authRefreshInterceptor: HttpInterceptorFn = (request, next) => {
   const auth = inject(AuthService);
   const api = inject(ApiService);
+  const router = inject(Router);
   const isApiRequest = request.url.startsWith(api.apiRoot);
   const isAuthRequest = request.url.startsWith(api.endpoint('/auth/'));
 
@@ -45,6 +47,7 @@ export const authRefreshInterceptor: HttpInterceptorFn = (request, next) => {
         }),
         catchError(() => {
           auth.clearSession();
+          void router.navigateByUrl('/login');
           return throwError(() => error);
         })
       );

@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
-import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
@@ -43,7 +43,7 @@ import { InlineAlertComponent } from '../../../shared/components/inline-alert/in
             <p class="mt-2 text-sm text-slate-400">Use your account credentials to continue to the dashboard.</p>
           </div>
 
-          <form class="mt-8 space-y-5" (ngSubmit)="submit()">
+          <form class="mt-8 space-y-5" [formGroup]="form" (ngSubmit)="submit()">
             @if (submitError()) {
               <app-inline-alert title="Unable to sign in" [message]="submitError()" tone="error"></app-inline-alert>
             }
@@ -53,11 +53,11 @@ import { InlineAlertComponent } from '../../../shared/components/inline-alert/in
               <input
                 id="email"
                 type="email"
-                [formControl]="emailControl"
+                formControlName="email"
                 class="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-cyan-400/60"
                 placeholder="user@example.com"
               >
-              @if (emailControl.invalid && emailControl.touched) {
+              @if (form.controls.email.invalid && form.controls.email.touched) {
                 <p class="mt-2 text-sm text-rose-300">Enter a valid email address.</p>
               }
             </div>
@@ -67,11 +67,11 @@ import { InlineAlertComponent } from '../../../shared/components/inline-alert/in
               <input
                 id="password"
                 type="password"
-                [formControl]="passwordControl"
+                formControlName="password"
                 class="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-cyan-400/60"
                 placeholder="Enter your password"
               >
-              @if (passwordControl.invalid && passwordControl.touched) {
+              @if (form.controls.password.invalid && form.controls.password.touched) {
                 <p class="mt-2 text-sm text-rose-300">Password must be at least 8 characters.</p>
               }
             </div>
@@ -100,22 +100,23 @@ export class LoginPageComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly toast = inject(ToastService);
 
-  protected readonly emailControl = new FormControl('', {
-    nonNullable: true,
-    validators: [Validators.required, Validators.email]
-  });
-  protected readonly passwordControl = new FormControl('', {
-    nonNullable: true,
-    validators: [Validators.required, Validators.minLength(8)]
+  protected readonly form = new FormGroup({
+    email: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required, Validators.email]
+    }),
+    password: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required, Validators.minLength(8)]
+    })
   });
   protected readonly isSubmitting = signal(false);
   protected readonly submitError = signal('');
 
   protected async submit(): Promise<void> {
-    this.emailControl.markAsTouched();
-    this.passwordControl.markAsTouched();
+    this.form.markAllAsTouched();
 
-    if (this.emailControl.invalid || this.passwordControl.invalid) {
+    if (this.form.invalid) {
       return;
     }
 
@@ -123,11 +124,9 @@ export class LoginPageComponent {
     this.submitError.set('');
 
     try {
+      const { email, password } = this.form.getRawValue();
       await firstValueFrom(
-        this.auth.login({
-          email: this.emailControl.getRawValue().trim(),
-          password: this.passwordControl.getRawValue()
-        })
+        this.auth.login({ email: email.trim(), password })
       );
 
       this.toast.success('Signed in', 'Your authenticated session is ready.');
