@@ -1,17 +1,18 @@
 <section class="space-y-6">
-  <div class="rounded-[2rem] border border-white/10 bg-gradient-to-br from-white/10 via-slate-900 to-slate-950 p-6 shadow-2xl shadow-slate-950/30 sm:p-8">
+  <div class="rounded-[2rem] border border-black/10 p-6 shadow-2xl sm:p-8 dark:border-white/10"
+       style="background: linear-gradient(135deg, rgba(6,182,212,0.07) 0%, var(--bg-page) 50%, var(--bg-page) 100%)">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
       <div>
-        <p class="text-sm uppercase tracking-[0.34em] text-cyan-300/80">File details</p>
-        <h2 class="mt-3 break-all text-3xl font-semibold tracking-tight text-white">{{ fileName() }}</h2>
-        <p class="mt-2 break-all text-sm text-slate-400">Folder: {{ folderPath() }}</p>
-        <p class="mt-3 max-w-3xl text-sm text-slate-300 sm:text-base">
+        <p class="text-sm uppercase tracking-[0.34em] text-cyan-600 dark:text-cyan-300/80">File details</p>
+        <h2 class="mt-3 break-all text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">{{ fileName() }}</h2>
+        <p class="mt-2 break-all text-sm text-slate-500 dark:text-slate-400">Folder: {{ folderPath() }}</p>
+        <p class="mt-3 max-w-3xl text-sm text-slate-600 sm:text-base dark:text-slate-300">
           See saved versions of this file, download an older copy, or remove a version you no longer need.
         </p>
       </div>
       <a
         routerLink="/files"
-        class="inline-flex rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-slate-100 transition hover:border-cyan-400/30 hover:bg-cyan-400/10"
+        class="btn-ghost inline-flex px-4 py-3 text-sm"
       >
         Back to files
       </a>
@@ -23,15 +24,15 @@
   }
 
   <div class="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-    <section class="rounded-[2rem] border border-white/10 bg-slate-900/80 p-5 shadow-2xl shadow-slate-950/30 backdrop-blur-xl sm:p-6">
+    <section class="card p-5 sm:p-6">
       <div class="flex items-center justify-between gap-4">
         <div>
-          <p class="text-sm font-semibold text-white">Saved versions</p>
-          <p class="text-sm text-slate-400">{{ versions().length }} saved {{ versions().length === 1 ? 'copy' : 'copies' }}</p>
+          <p class="text-sm font-semibold text-slate-900 dark:text-white">Saved versions</p>
+          <p class="text-sm text-slate-500 dark:text-slate-400">{{ versions().length }} saved {{ versions().length === 1 ? 'copy' : 'copies' }}</p>
         </div>
         <button
           type="button"
-          class="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-cyan-400/30 hover:bg-cyan-400/10"
+          class="btn-ghost px-4 py-2 text-sm"
           (click)="reload()"
         >
           Refresh
@@ -61,18 +62,20 @@
               class="block w-full rounded-3xl border px-5 py-4 text-left transition"
               [class.border-cyan-400/40]="selectedManifest()?.versionId === version.versionId"
               [class.bg-cyan-400/10]="selectedManifest()?.versionId === version.versionId"
-              [class.border-white/10]="selectedManifest()?.versionId !== version.versionId"
-              [class.bg-white/5]="selectedManifest()?.versionId !== version.versionId"
+              [class.border-black/10]="selectedManifest()?.versionId !== version.versionId"
+              [class.bg-black/5]="selectedManifest()?.versionId !== version.versionId"
+              [class.dark:border-white/10]="selectedManifest()?.versionId !== version.versionId"
+              [class.dark:bg-white/5]="selectedManifest()?.versionId !== version.versionId"
               (click)="selectVersion(version.versionId)"
             >
               <div class="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <div class="flex items-center gap-2">
-                    <p class="text-sm font-semibold text-white">
+                    <p class="text-sm font-semibold text-slate-900 dark:text-white">
                       {{ index === 0 ? 'Latest version' : 'Saved version ' + (versions().length - index) }}
                     </p>
                     @if (version.deleted) {
-                      <span class="rounded-full border border-rose-400/30 bg-rose-400/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.24em] text-rose-200">
+                      <span class="rounded-full border border-rose-500/40 bg-rose-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.24em] text-rose-700 dark:border-rose-400/30 dark:bg-rose-400/10 dark:text-rose-200">
                         Removed
                       </span>
                     }
@@ -80,8 +83,8 @@
                   <p class="mt-2 text-xs uppercase tracking-[0.24em] text-slate-500">Saved {{ formatDateTime(version.createdAt) }}</p>
                 </div>
                 <div class="text-right">
-                  <p class="text-sm font-medium text-slate-200">{{ formatBytes(version.sizeBytes) }}</p>
-                  <p class="mt-2 text-xs text-slate-400">{{ version.deleted ? 'Not available for download' : 'Available to download' }}</p>
+                  <p class="text-sm font-medium text-slate-700 dark:text-slate-200">{{ formatBytes(version.sizeBytes) }}</p>
+                  <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">{{ version.deleted ? 'Not available for download' : 'Available to download' }}</p>
                 </div>
               </div>
             </button>
@@ -90,17 +93,17 @@
       }
     </section>
 
-    <section class="rounded-[2rem] border border-white/10 bg-slate-900/80 p-5 shadow-2xl shadow-slate-950/30 backdrop-blur-xl sm:p-6">
+    <section class="card p-5 sm:p-6">
       <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p class="text-sm font-semibold text-white">Version details</p>
-          <p class="text-sm text-slate-400">Download or remove the version you have selected.</p>
+          <p class="text-sm font-semibold text-slate-900 dark:text-white">Version details</p>
+          <p class="text-sm text-slate-500 dark:text-slate-400">Download or remove the version you have selected.</p>
         </div>
         @if (selectedManifest(); as manifest) {
           <div class="flex flex-wrap gap-2">
             <button
               type="button"
-              class="rounded-2xl bg-cyan-400 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
+              class="btn-primary text-sm"
               [disabled]="isDownloading() || manifest.deleted"
               (click)="downloadSelected()"
             >
@@ -108,7 +111,7 @@
             </button>
             <button
               type="button"
-              class="rounded-2xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm font-semibold text-rose-100 transition hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+              class="rounded-2xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm font-semibold text-rose-700 transition hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-400/30 dark:text-rose-200"
               [disabled]="isDeleting() || manifest.deleted"
               (click)="deleteSelected()"
             >
@@ -127,36 +130,36 @@
         </div>
       } @else if (selectedManifest(); as manifest) {
         <div class="mt-6 space-y-4">
-          <div class="rounded-3xl border border-white/10 bg-white/5 p-5">
+          <div class="surface p-5">
             <div class="flex flex-wrap items-center gap-3">
-              <p class="text-lg font-semibold text-white">
+              <p class="text-lg font-semibold text-slate-900 dark:text-white">
                 {{ isLatestVersion(manifest) ? 'Latest version' : 'Saved version' }}
               </p>
               @if (manifest.deleted) {
-                <span class="rounded-full border border-rose-400/30 bg-rose-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-rose-200">
+                <span class="rounded-full border border-rose-500/40 bg-rose-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-rose-700 dark:border-rose-400/30 dark:bg-rose-400/10 dark:text-rose-200">
                   Removed {{ manifest.deletedAt ? '· ' + formatDateTime(manifest.deletedAt) : '' }}
                 </span>
               }
             </div>
-            <p class="mt-3 break-all text-sm text-slate-300">{{ fileName() }}</p>
+            <p class="mt-3 break-all text-sm text-slate-600 dark:text-slate-300">{{ fileName() }}</p>
           </div>
 
           <div class="grid gap-4 sm:grid-cols-2">
-            <div class="rounded-3xl border border-white/10 bg-white/5 p-5">
+            <div class="surface p-5">
               <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Folder</p>
-              <p class="mt-2 break-all text-sm font-medium text-slate-100">{{ folderPath() }}</p>
+              <p class="mt-2 break-all text-sm font-medium text-slate-800 dark:text-slate-100">{{ folderPath() }}</p>
             </div>
-            <div class="rounded-3xl border border-white/10 bg-white/5 p-5">
+            <div class="surface p-5">
               <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Size</p>
-              <p class="mt-2 text-sm font-medium text-slate-100">{{ formatBytes(manifest.sizeBytes) }}</p>
+              <p class="mt-2 text-sm font-medium text-slate-800 dark:text-slate-100">{{ formatBytes(manifest.sizeBytes) }}</p>
             </div>
-            <div class="rounded-3xl border border-white/10 bg-white/5 p-5">
+            <div class="surface p-5">
               <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Saved on</p>
-              <p class="mt-2 text-sm font-medium text-slate-100">{{ formatDateTime(manifest.createdAt) }}</p>
+              <p class="mt-2 text-sm font-medium text-slate-800 dark:text-slate-100">{{ formatDateTime(manifest.createdAt) }}</p>
             </div>
-            <div class="rounded-3xl border border-white/10 bg-white/5 p-5">
+            <div class="surface p-5">
               <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Status</p>
-              <p class="mt-2 text-sm font-medium text-slate-100">{{ manifest.deleted ? 'Removed' : 'Available' }}</p>
+              <p class="mt-2 text-sm font-medium text-slate-800 dark:text-slate-100">{{ manifest.deleted ? 'Removed' : 'Available' }}</p>
             </div>
           </div>
         </div>

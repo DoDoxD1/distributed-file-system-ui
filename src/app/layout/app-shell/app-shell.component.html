@@ -85,7 +85,7 @@
   @if (auth.isAdmin()) {
     <div class="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[18rem_minmax(0,1fr)] lg:px-8 lg:py-8">
       <aside class="hidden lg:block">
-        <div class="sticky top-28 space-y-6 rounded-[2rem] border border-black/10 bg-black/5 p-4 shadow-2xl shadow-slate-200/50 backdrop-blur-xl dark:border-white/10 dark:bg-white/5 dark:shadow-slate-950/40">
+        <div class="card sticky top-28 space-y-6 p-4">
           <nav class="space-y-2">
             @for (item of navItems(); track item.route) {
               <a
@@ -102,7 +102,7 @@
       </aside>
       <main class="min-w-0 space-y-6">
         <div class="overflow-x-auto lg:hidden">
-          <div class="flex min-w-max gap-2 rounded-3xl border border-black/10 bg-black/5 p-2 backdrop-blur-xl dark:border-white/10 dark:bg-white/5">
+          <div class="surface flex min-w-max gap-2 p-2">
             @for (item of navItems(); track item.route) {
               <a
                 [routerLink]="item.route"

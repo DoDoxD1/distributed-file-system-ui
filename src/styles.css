@@ -2,6 +2,41 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer components {
+  /* Large rounded card — used for page sections and modals */
+  .card {
+    @apply rounded-[2rem] border border-black/10 bg-white shadow-2xl shadow-slate-200/50 backdrop-blur-xl
+           dark:border-white/10 dark:bg-slate-900/80 dark:shadow-slate-950/30;
+  }
+
+  /* Smaller inset tile — stat chips, feature bullets, sub-surfaces */
+  .surface {
+    @apply rounded-3xl border border-black/10 bg-black/5
+           dark:border-white/10 dark:bg-white/5;
+  }
+
+  /* Text input / textarea */
+  .input {
+    @apply w-full rounded-2xl border border-black/15 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition
+           placeholder:text-slate-400 focus:border-cyan-500/60
+           dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-100
+           dark:placeholder:text-slate-500 dark:focus:border-cyan-400/60;
+  }
+
+  /* Primary CTA button — cyan fill */
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-2xl bg-cyan-400 px-4 py-3 font-semibold text-slate-950 transition
+           hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  /* Ghost button — subtle border/bg, inherits context size */
+  .btn-ghost {
+    @apply rounded-2xl border border-black/10 bg-black/5 font-medium text-slate-700 transition
+           hover:bg-cyan-400/10
+           dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:border-cyan-400/30;
+  }
+}
+
 @layer base {
   html {
     @apply h-full;
