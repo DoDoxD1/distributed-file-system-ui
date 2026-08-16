@@ -9,20 +9,15 @@
         </p>
       </div>
 
-      <form class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] xl:w-[28rem]" [formGroup]="searchForm" (ngSubmit)="refreshFiles()">
+      <div class="xl:w-[28rem]">
         <input
-          type="text"
-          formControlName="prefix"
+          type="search"
           class="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-cyan-400/60"
-          placeholder="Search by folder, for example /docs"
+          placeholder="Filter by name or path…"
+          [value]="searchQuery()"
+          (input)="searchQuery.set($any($event.target).value)"
         >
-        <button
-          type="submit"
-          class="rounded-2xl bg-cyan-400 px-4 py-3 font-semibold text-slate-950 transition hover:bg-cyan-300"
-        >
-          Search
-        </button>
-      </form>
+      </div>
     </div>
   </div>
 
@@ -31,7 +26,13 @@
       <div class="flex items-center justify-between gap-4">
         <div>
           <p class="text-sm font-semibold text-white">Your files</p>
-          <p class="text-sm text-slate-400">{{ files().length }} item{{ files().length === 1 ? '' : 's' }}</p>
+          <p class="text-sm text-slate-400">
+            @if (searchQuery()) {
+              {{ filteredFiles().length }} of {{ files().length }} item{{ files().length === 1 ? '' : 's' }}
+            } @else {
+              {{ files().length }} item{{ files().length === 1 ? '' : 's' }}
+            }
+          </p>
         </div>
         <div class="flex items-center gap-2">
           <button
@@ -64,7 +65,13 @@
         <app-empty-state
           icon="/"
           title="No files found"
-          description="Try a different folder search or upload a new file below."
+          description="Upload a file to get started."
+        ></app-empty-state>
+      } @else if (!filteredFiles().length) {
+        <app-empty-state
+          icon="?"
+          title="No matches"
+          description="No files match your filter. Try a different search term."
         ></app-empty-state>
       } @else {
         <div class="max-h-[40rem] space-y-1 overflow-y-auto pr-1">
@@ -96,22 +103,51 @@
                     <p class="truncate text-sm font-semibold text-white">{{ getFileName(entry.file.logicalPath) }}</p>
                     <p class="mt-0.5 text-xs text-slate-500">{{ formatBytes(entry.file.sizeBytes) }} · {{ formatDateTime(entry.file.createdAt) }}</p>
                   </div>
-                  <div class="flex shrink-0 gap-2">
-                    <button
-                      type="button"
-                      class="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-100 transition hover:border-cyan-400/30 hover:bg-cyan-400/10"
-                      (click)="openPreview(entry.file)"
-                    >
-                      View
-                    </button>
-                    <button
-                      type="button"
-                      class="rounded-xl bg-cyan-400 px-3 py-1.5 text-xs font-semibold text-slate-950 transition hover:bg-cyan-300"
-                      (click)="downloadFile(entry.file)"
-                    >
-                      Download
-                    </button>
-                  </div>
+                  @if (pendingDeleteFile()?.logicalPath === entry.file.logicalPath) {
+                    <div class="flex shrink-0 items-center gap-2">
+                      <span class="text-xs text-slate-400">Delete?</span>
+                      <button
+                        type="button"
+                        class="rounded-xl bg-rose-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-rose-400 disabled:opacity-60"
+                        [disabled]="isDeleting()"
+                        (click)="confirmDelete()"
+                      >
+                        {{ isDeleting() ? '…' : 'Yes' }}
+                      </button>
+                      <button
+                        type="button"
+                        class="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-300 transition hover:bg-white/10"
+                        [disabled]="isDeleting()"
+                        (click)="cancelDelete()"
+                      >
+                        No
+                      </button>
+                    </div>
+                  } @else {
+                    <div class="flex shrink-0 gap-2">
+                      <button
+                        type="button"
+                        class="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-100 transition hover:border-cyan-400/30 hover:bg-cyan-400/10"
+                        (click)="openPreview(entry.file)"
+                      >
+                        View
+                      </button>
+                      <button
+                        type="button"
+                        class="rounded-xl bg-cyan-400 px-3 py-1.5 text-xs font-semibold text-slate-950 transition hover:bg-cyan-300"
+                        (click)="downloadFile(entry.file)"
+                      >
+                        Download
+                      </button>
+                      <button
+                        type="button"
+                        class="rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-1.5 text-xs font-medium text-rose-300 transition hover:bg-rose-500/20"
+                        (click)="requestDelete(entry.file)"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  }
                 </div>
               </article>
             }

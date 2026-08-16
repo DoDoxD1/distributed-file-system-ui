@@ -62,9 +62,7 @@ export class FilesDashboardPageComponent {
   private readonly sanitizer = inject(DomSanitizer);
   private readonly toast = inject(ToastService);
 
-  protected readonly searchForm = new FormGroup({
-    prefix: new FormControl('', { nonNullable: true })
-  });
+  protected readonly searchQuery = signal('');
   protected readonly uploadForm = new FormGroup({
     logicalPath: new FormControl('', {
       nonNullable: true,
@@ -73,11 +71,16 @@ export class FilesDashboardPageComponent {
   });
 
   protected readonly files = signal<FileListingResponse[]>([]);
+  protected readonly filteredFiles = computed(() => {
+    const q = this.searchQuery().trim().toLowerCase();
+    if (!q) return this.files();
+    return this.files().filter((f) => f.logicalPath.toLowerCase().includes(q));
+  });
   protected readonly expandedFolders = signal<ReadonlySet<string>>(new Set<string>());
 
   protected readonly treeEntries = computed(() => {
     const expanded = this.expandedFolders();
-    const root = buildFolderTree(this.files());
+    const root = buildFolderTree(this.filteredFiles());
     const entries: TreeEntry[] = [];
 
     const walk = (node: FolderNodeType, depth: number): void => {
@@ -102,6 +105,8 @@ export class FilesDashboardPageComponent {
   });
   protected readonly selectedFile = signal<FileListingResponse | null>(null);
   protected readonly selectedUploadFile = signal<File | null>(null);
+  protected readonly pendingDeleteFile = signal<FileListingResponse | null>(null);
+  protected readonly isDeleting = signal(false);
   protected readonly previewFile = signal<FileListingResponse | null>(null);
   protected readonly previewObjectUrl = signal<string | null>(null);
   protected readonly safePdfUrl = computed<SafeResourceUrl | null>(() => {
@@ -137,8 +142,7 @@ export class FilesDashboardPageComponent {
     this.listError.set('');
 
     try {
-      const prefix = this.searchForm.controls.prefix.getRawValue().trim();
-      const files = await firstValueFrom(this.filesService.listFiles(prefix || undefined));
+      const files = await firstValueFrom(this.filesService.listFiles());
       this.files.set(files);
 
       if (!files.length) {
@@ -252,6 +256,33 @@ export class FilesDashboardPageComponent {
       this.toast.error('Upload failed', message);
     } finally {
       this.isUploading.set(false);
+    }
+  }
+
+  protected requestDelete(file: FileListingResponse): void {
+    this.pendingDeleteFile.set(file);
+  }
+
+  protected cancelDelete(): void {
+    this.pendingDeleteFile.set(null);
+  }
+
+  protected async confirmDelete(): Promise<void> {
+    const file = this.pendingDeleteFile();
+    if (!file) return;
+
+    this.isDeleting.set(true);
+
+    try {
+      await firstValueFrom(this.filesService.deleteFile(file.logicalPath));
+      this.files.update((current) => current.filter((f) => f.logicalPath !== file.logicalPath));
+      this.pendingDeleteFile.set(null);
+      this.toast.success('File deleted', `${extractFileName(file.logicalPath)} has been removed.`);
+    } catch (error) {
+      const message = getErrorMessage(error, 'The file could not be deleted.');
+      this.toast.error('Delete failed', message);
+    } finally {
+      this.isDeleting.set(false);
     }
   }
 
