@@ -21,6 +21,7 @@ export interface ErrorResponse {
 export interface UserResponse {
   userId: string;
   email: string;
+  displayName: string | null;
   isAdmin: boolean;
   createdAt: string;
 }
@@ -40,6 +41,16 @@ export interface AuthSession {
 export interface CredentialsRequest {
   email: string;
   password: string;
+}
+
+export interface RegistrationRequest {
+  email: string;
+  password: string;
+  displayName?: string | null;
+}
+
+export interface UpdateDisplayNameRequest {
+  displayName: string;
 }
 
 export interface UploadFileRequest {

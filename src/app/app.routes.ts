@@ -10,6 +10,7 @@ import { LoginPageComponent } from './features/auth/login-page/login-page.compon
 import { RegisterPageComponent } from './features/auth/register-page/register-page.component';
 import { SystemPageComponent } from './features/system/system-page/system-page.component';
 import { WorkersPageComponent } from './features/workers/workers-page/workers-page.component';
+import { SettingsPageComponent } from './features/settings/settings-page/settings-page.component';
 import { AppShellComponent } from './layout/app-shell/app-shell.component';
 
 export const routes: Routes = [
@@ -54,6 +55,10 @@ export const routes: Routes = [
         path: 'workers',
         component: WorkersPageComponent,
         canActivate: [adminGuard]
+      },
+      {
+        path: 'settings',
+        component: SettingsPageComponent
       }
     ]
   },

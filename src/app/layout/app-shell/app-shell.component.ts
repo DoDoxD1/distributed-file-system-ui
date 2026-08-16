@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 
 import { AuthService } from '../../core/services/auth.service';
 import { FileCacheService } from '../../core/services/file-cache.service';
@@ -26,6 +26,8 @@ export class AppShellComponent {
   protected readonly auth = inject(AuthService);
   protected readonly themeService = inject(ThemeService);
   protected readonly menuOpen = signal(false);
+  protected readonly userMenuOpen = signal(false);
+  private readonly router = inject(Router);
 
   private readonly navigationItems: NavigationItem[] = [
     { label: 'Files', shortLabel: 'Files', route: '/files' },
@@ -40,6 +42,12 @@ export class AppShellComponent {
 
   protected toggleMenu(): void {
     this.menuOpen.update((value) => !value);
+  }
+
+  protected navigateToSettings(): void {
+    this.userMenuOpen.set(false);
+    this.menuOpen.set(false);
+    void this.router.navigateByUrl('/settings');
   }
 
   protected async logout(): Promise<void> {

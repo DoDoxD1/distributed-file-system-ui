@@ -29,7 +29,8 @@ export class RegisterPageComponent {
     password: new FormControl('', {
       nonNullable: true,
       validators: [Validators.required, Validators.minLength(8)]
-    })
+    }),
+    displayName: new FormControl('', { nonNullable: true })
   });
   protected readonly isSubmitting = signal(false);
   protected readonly submitError = signal('');
@@ -45,9 +46,14 @@ export class RegisterPageComponent {
     this.submitError.set('');
 
     try {
-      const { email, password } = this.form.getRawValue();
+      const { email, password, displayName } = this.form.getRawValue();
+      const trimmedName = displayName.trim();
       await firstValueFrom(
-        this.auth.register({ email: email.trim(), password })
+        this.auth.register({
+          email: email.trim(),
+          password,
+          ...(trimmedName ? { displayName: trimmedName } : {})
+        })
       );
 
       this.toast.success('Account created', 'You are signed in and ready to use the dashboard.');

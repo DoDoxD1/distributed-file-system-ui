@@ -3,7 +3,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, catchError, finalize, firstValueFrom, map, of, shareReplay, tap, throwError } from 'rxjs';
 
-import { AuthResponse, AuthSession, CredentialsRequest } from '../models/api.models';
+import { AuthResponse, AuthSession, CredentialsRequest, RegistrationRequest, UpdateDisplayNameRequest } from '../models/api.models';
 import { AuthApiService } from './auth-api.service';
 import { ApiService } from './api.service';
 
@@ -53,8 +53,23 @@ export class AuthService {
     return this.authApi.login(payload).pipe(tap((response) => this.persistSession(response)));
   }
 
-  register(payload: CredentialsRequest): Observable<AuthResponse> {
+  register(payload: RegistrationRequest): Observable<AuthResponse> {
     return this.authApi.register(payload).pipe(tap((response) => this.persistSession(response)));
+  }
+
+  updateDisplayName(payload: UpdateDisplayNameRequest): Observable<void> {
+    return this.authApi.updateDisplayName(payload).pipe(
+      tap((updatedUser) => {
+        const current = this.sessionState();
+        if (!current) {
+          return;
+        }
+        const updated: AuthSession = { ...current, user: updatedUser };
+        this.sessionState.set(updated);
+        localStorage.setItem(this.storageKey, JSON.stringify(updated));
+      }),
+      map(() => void 0)
+    );
   }
 
   refreshSession(): Observable<AuthResponse> {
