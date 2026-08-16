@@ -24,4 +24,12 @@ export class AuthApiService {
       context: createPublicAuthContext()
     });
   }
+
+  logout(): Observable<void> {
+    return this.http.post<void>(this.api.endpoint('/auth/logout'), null, {
+      withCredentials: true,
+      credentials: 'include',
+      context: createPublicAuthContext()
+    });
+  }
 }

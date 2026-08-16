@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
-import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
@@ -126,7 +126,6 @@ interface NavigationItem {
   `
 })
 export class AppShellComponent {
-  private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
   protected readonly auth = inject(AuthService);
   protected readonly menuOpen = signal(false);
@@ -146,10 +145,9 @@ export class AppShellComponent {
     this.menuOpen.update((value) => !value);
   }
 
-  protected logout(): void {
-    this.auth.logout();
+  protected async logout(): Promise<void> {
     this.menuOpen.set(false);
+    await this.auth.logout();
     this.toast.info('Signed out', 'Your access token and local session state were cleared.');
-    void this.router.navigate(['/login']);
   }
 }

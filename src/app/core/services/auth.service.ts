@@ -1,5 +1,6 @@
 import { HttpClient, HttpBackend } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { Observable, catchError, finalize, firstValueFrom, map, of, shareReplay, tap, throwError } from 'rxjs';
 
 import { AuthResponse, AuthSession, CredentialsRequest } from '../models/api.models';
@@ -12,6 +13,7 @@ export class AuthService {
   private readonly authApi = inject(AuthApiService);
   private readonly api = inject(ApiService);
   private readonly http = new HttpClient(inject(HttpBackend));
+  private readonly router = inject(Router);
 
   private readonly sessionState = signal<AuthSession | null>(null);
   private readonly readyState = signal(false);
@@ -75,12 +77,15 @@ export class AuthService {
     return this.refreshRequest$;
   }
 
-  logout(): void {
+  async logout(): Promise<void> {
+    await firstValueFrom(this.authApi.logout().pipe(catchError(() => of(void 0))));
     this.clearSession();
+    void this.router.navigateByUrl('/login');
   }
 
   clearSession(): void {
     this.sessionState.set(null);
+    this.refreshRequest$ = null;
     localStorage.removeItem(this.storageKey);
   }
 
