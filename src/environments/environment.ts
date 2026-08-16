@@ -1,5 +1,5 @@
 export const environment = {
   production: true,
-  apiBaseUrl: 'http://localhost:8080',
+  apiBaseUrl: 'https://dfs-ui.duckdns.org',
   apiPrefix: '/api/v1'
 };

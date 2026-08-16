@@ -1,0 +1,11 @@
+dfs-ui.duckdns.org {
+    encode gzip
+
+    # Proxy all API calls to the backend running on the host
+    reverse_proxy /api/* host.docker.internal:8080
+
+    # Serve the Angular SPA; fall back to index.html for client-side routes
+    root * /srv
+    file_server
+    try_files {path} /index.html
+}
