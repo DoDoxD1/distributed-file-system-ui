@@ -63,7 +63,7 @@
                 class="shrink-0 rounded-xl px-3 py-1.5 text-sm font-medium text-cyan-600 transition hover:bg-cyan-400/10 dark:text-cyan-300"
                 (click)="exitToPath(crumb.path)"
               >{{ crumb.label }}</button>
-              <span class="shrink-0 text-slate-400">/</span>
+              <i class="fa-solid fa-chevron-right shrink-0 text-xs text-slate-400"></i>
             } @else {
               <span class="shrink-0 rounded-xl px-3 py-1.5 text-sm font-medium text-slate-900 dark:text-white">{{ crumb.label }}</span>
             }
@@ -101,12 +101,12 @@
                 class="btn-ghost flex w-full items-center gap-2 px-4 py-3 text-left hover:bg-cyan-400/5 dark:hover:border-cyan-400/20 dark:hover:bg-cyan-400/5"
                 (click)="enterFolder(entry.node.path)"
               >
-                <span class="text-slate-400">📁</span>
+                <i class="fa-solid fa-folder text-slate-400"></i>
                 <span class="text-sm font-medium text-slate-700 dark:text-slate-200">{{ entry.node.name }}</span>
                 <span class="ml-auto text-xs text-slate-500">
                   {{ entry.node.files.length + entry.node.children.length }} item{{ entry.node.files.length + entry.node.children.length === 1 ? '' : 's' }}
                 </span>
-                <span class="text-slate-400">›</span>
+                <i class="fa-solid fa-chevron-right text-xs text-slate-400"></i>
               </button>
             } @else {
               <article
