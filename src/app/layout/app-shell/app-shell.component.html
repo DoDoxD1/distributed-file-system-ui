@@ -100,18 +100,38 @@
   </header>
 
   @if (auth.isAdmin()) {
-    <div class="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[18rem_minmax(0,1fr)] lg:px-8 lg:py-8">
+    <div
+      class="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:px-8 lg:py-8"
+      [class.lg:grid-cols-[18rem_minmax(0,1fr)]]="!sidebarCollapsed()"
+      [class.lg:grid-cols-[4rem_minmax(0,1fr)]]="sidebarCollapsed()"
+    >
       <aside class="hidden lg:block">
-        <div class="card sticky top-28 space-y-6 p-4">
-          <nav class="space-y-2">
-            @for (item of navItems(); track item.route) {
+        <div class="card sticky top-28 space-y-2 p-3">
+          <div class="flex items-center justify-end">
+            <button
+              type="button"
+              class="flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 transition hover:bg-black/5 hover:text-slate-700 dark:hover:bg-white/5 dark:hover:text-slate-200"
+              [attr.aria-label]="sidebarCollapsed() ? 'Expand sidebar' : 'Collapse sidebar'"
+              (click)="toggleSidebar()"
+            >
+              <i [class]="sidebarCollapsed() ? 'fa-solid fa-angles-right text-xs' : 'fa-solid fa-angles-left text-xs'"></i>
+            </button>
+          </div>
+          <nav class="space-y-1">
+            @for (item of sidebarItems(); track item.route) {
               <a
                 [routerLink]="item.route"
                 routerLinkActive="bg-cyan-400/15 text-cyan-700 shadow-inner shadow-cyan-400/10 dark:text-white"
-                class="flex items-center justify-between rounded-2xl px-4 py-3 text-sm font-medium text-slate-600 transition hover:bg-black/5 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white"
+                class="flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium text-slate-600 transition hover:bg-black/5 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white"
+                [class.justify-center]="sidebarCollapsed()"
+                [class.justify-between]="!sidebarCollapsed()"
+                [attr.title]="sidebarCollapsed() ? item.label : null"
               >
-                <span>{{ item.label }}</span>
-                <i class="fa-solid fa-chevron-right text-xs text-slate-400 dark:text-slate-500"></i>
+                <i [class]="item.icon + ' w-4 text-center'"></i>
+                @if (!sidebarCollapsed()) {
+                  <span>{{ item.label }}</span>
+                  <i class="fa-solid fa-chevron-right ml-auto text-xs text-slate-400 dark:text-slate-500"></i>
+                }
               </a>
             }
           </nav>

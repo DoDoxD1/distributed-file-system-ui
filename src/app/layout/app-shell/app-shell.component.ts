@@ -10,8 +10,10 @@ import { ToastService } from '../../core/services/toast.service';
 interface NavigationItem {
   label: string;
   shortLabel: string;
+  icon: string;
   route: string;
   adminOnly?: boolean;
+  hideFromSidebar?: boolean;
 }
 
 @Component({
@@ -30,15 +32,25 @@ export class AppShellComponent {
   private readonly router = inject(Router);
 
   private readonly navigationItems: NavigationItem[] = [
-    { label: 'Files', shortLabel: 'Files', route: '/files' },
-    { label: 'Upload', shortLabel: 'Upload', route: '/direct-upload' },
-    { label: 'System status', shortLabel: 'Status', route: '/system', adminOnly: true },
-    { label: 'Admin tools', shortLabel: 'Admin', route: '/workers', adminOnly: true }
+    { label: 'Files', shortLabel: 'Files', icon: 'fa-solid fa-folder-open', route: '/files' },
+    { label: 'Upload', shortLabel: 'Upload', icon: 'fa-solid fa-upload', route: '/direct-upload', hideFromSidebar: true },
+    { label: 'System status', shortLabel: 'Status', icon: 'fa-solid fa-server', route: '/system', adminOnly: true },
+    { label: 'Admin tools', shortLabel: 'Admin', icon: 'fa-solid fa-screwdriver-wrench', route: '/workers', adminOnly: true }
   ];
 
   protected readonly navItems = computed(() =>
     this.navigationItems.filter((item) => !item.adminOnly || this.auth.isAdmin())
   );
+
+  protected readonly sidebarItems = computed(() =>
+    this.navItems().filter((item) => !item.hideFromSidebar)
+  );
+
+  protected readonly sidebarCollapsed = signal(false);
+
+  protected toggleSidebar(): void {
+    this.sidebarCollapsed.update((v) => !v);
+  }
 
   protected toggleMenu(): void {
     this.menuOpen.update((value) => !value);
