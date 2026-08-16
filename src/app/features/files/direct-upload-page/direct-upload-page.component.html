@@ -1,17 +1,18 @@
 <section class="space-y-6">
-  <div class="rounded-[2rem] border border-white/10 bg-gradient-to-br from-cyan-400/15 via-slate-900 to-slate-950 p-6 shadow-2xl shadow-cyan-950/20 sm:p-8">
-    <p class="text-sm uppercase tracking-[0.34em] text-cyan-300/80">Large file upload</p>
-    <h2 class="mt-3 text-3xl font-semibold tracking-tight text-white">Upload big files with a faster transfer flow</h2>
-    <p class="mt-3 max-w-3xl text-sm text-slate-300 sm:text-base">
+  <div class="rounded-[2rem] border border-black/10 p-6 shadow-2xl sm:p-8 dark:border-white/10"
+       style="background: linear-gradient(135deg, rgba(6,182,212,0.08) 0%, var(--bg-page) 50%, var(--bg-page) 100%)">
+    <p class="text-sm uppercase tracking-[0.34em] text-cyan-600 dark:text-cyan-300/80">Large file upload</p>
+    <h2 class="mt-3 text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">Upload big files with a faster transfer flow</h2>
+    <p class="mt-3 max-w-3xl text-sm text-slate-600 sm:text-base dark:text-slate-300">
       This option sends the file in a more reliable way for larger uploads, then saves it to your account when the transfer finishes.
     </p>
   </div>
 
   <div class="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-    <section class="rounded-[2rem] border border-white/10 bg-slate-900/80 p-5 shadow-2xl shadow-slate-950/30 backdrop-blur-xl sm:p-6">
+    <section class="rounded-[2rem] border border-black/10 bg-white p-5 shadow-2xl shadow-slate-200/50 backdrop-blur-xl sm:p-6 dark:border-white/10 dark:bg-slate-900/80 dark:shadow-slate-950/30">
       <div>
-        <p class="text-sm font-semibold text-white">Start an upload</p>
-        <p class="text-sm text-slate-400">Choose a file and tell us where you want it saved.</p>
+        <p class="text-sm font-semibold text-slate-900 dark:text-white">Start an upload</p>
+        <p class="text-sm text-slate-500 dark:text-slate-400">Choose a file and tell us where you want it saved.</p>
       </div>
 
       <form class="mt-6 space-y-5" [formGroup]="sessionForm" (ngSubmit)="startSession()">
@@ -28,27 +29,27 @@
         ></app-dropzone>
 
         <div>
-          <label class="mb-2 block text-sm font-medium text-slate-200" for="direct-logical-path">Save location</label>
+          <label class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200" for="direct-logical-path">Save location</label>
           <input
             id="direct-logical-path"
             type="text"
             formControlName="logicalPath"
-            class="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-cyan-400/60"
+            class="w-full rounded-2xl border border-black/15 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-cyan-500/60 dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-cyan-400/60"
             placeholder="/docs/report.pdf"
           >
           @if (sessionForm.controls.logicalPath.invalid && sessionForm.controls.logicalPath.touched) {
-            <p class="mt-2 text-sm text-rose-300">Please enter a location that starts with /.</p>
+            <p class="mt-2 text-sm text-rose-600 dark:text-rose-300">Please enter a location that starts with /.</p>
           }
         </div>
 
-        <div class="grid gap-4 rounded-3xl border border-white/10 bg-white/5 p-5 sm:grid-cols-2">
+        <div class="grid gap-4 rounded-3xl border border-black/10 bg-black/5 p-5 sm:grid-cols-2 dark:border-white/10 dark:bg-white/5">
           <div>
             <p class="text-xs uppercase tracking-[0.24em] text-slate-500">File size</p>
-            <p class="mt-2 text-sm font-medium text-slate-100">{{ selectedFile() ? formatBytes(selectedFile()!.size) : '—' }}</p>
+            <p class="mt-2 text-sm font-medium text-slate-800 dark:text-slate-100">{{ selectedFile() ? formatBytes(selectedFile()!.size) : '—' }}</p>
           </div>
           <div>
             <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Status</p>
-            <p class="mt-2 text-sm font-medium text-slate-100">
+            <p class="mt-2 text-sm font-medium text-slate-800 dark:text-slate-100">
               {{ isHashing() ? 'Preparing your file…' : selectedFile() ? 'Ready to upload' : 'Choose a file to begin' }}
             </p>
           </div>
@@ -65,16 +66,16 @@
     </section>
 
     <div class="space-y-6">
-      <section class="rounded-[2rem] border border-white/10 bg-slate-900/80 p-5 shadow-2xl shadow-slate-950/30 backdrop-blur-xl sm:p-6">
+      <section class="rounded-[2rem] border border-black/10 bg-white p-5 shadow-2xl shadow-slate-200/50 backdrop-blur-xl sm:p-6 dark:border-white/10 dark:bg-slate-900/80 dark:shadow-slate-950/30">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p class="text-sm font-semibold text-white">Upload progress</p>
-            <p class="text-sm text-slate-400">If the transfer stops, you can continue it from here.</p>
+            <p class="text-sm font-semibold text-slate-900 dark:text-white">Upload progress</p>
+            <p class="text-sm text-slate-500 dark:text-slate-400">If the transfer stops, you can continue it from here.</p>
           </div>
           @if (currentSession()) {
             <button
               type="button"
-              class="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-cyan-400/30 hover:bg-cyan-400/10"
+              class="rounded-2xl border border-black/10 bg-black/5 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-cyan-400/10 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:border-cyan-400/30"
               [disabled]="isWorking()"
               (click)="resumeCurrentSession()"
             >
@@ -103,38 +104,38 @@
             </div>
 
             <div class="grid gap-4 sm:grid-cols-2">
-              <div class="rounded-3xl border border-white/10 bg-white/5 p-5">
+              <div class="rounded-3xl border border-black/10 bg-black/5 p-5 dark:border-white/10 dark:bg-white/5">
                 <p class="text-xs uppercase tracking-[0.24em] text-slate-500">File name</p>
-                <p class="mt-2 break-all text-sm font-medium text-slate-100">{{ getFileName(session.logicalPath) }}</p>
+                <p class="mt-2 break-all text-sm font-medium text-slate-800 dark:text-slate-100">{{ getFileName(session.logicalPath) }}</p>
               </div>
-              <div class="rounded-3xl border border-white/10 bg-white/5 p-5">
+              <div class="rounded-3xl border border-black/10 bg-black/5 p-5 dark:border-white/10 dark:bg-white/5">
                 <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Folder</p>
-                <p class="mt-2 break-all text-sm font-medium text-slate-100">{{ getFolderPath(session.logicalPath) }}</p>
+                <p class="mt-2 break-all text-sm font-medium text-slate-800 dark:text-slate-100">{{ getFolderPath(session.logicalPath) }}</p>
               </div>
-              <div class="rounded-3xl border border-white/10 bg-white/5 p-5">
+              <div class="rounded-3xl border border-black/10 bg-black/5 p-5 dark:border-white/10 dark:bg-white/5">
                 <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Size</p>
-                <p class="mt-2 text-sm font-medium text-slate-100">{{ formatBytes(session.sizeBytes) }}</p>
+                <p class="mt-2 text-sm font-medium text-slate-800 dark:text-slate-100">{{ formatBytes(session.sizeBytes) }}</p>
               </div>
-              <div class="rounded-3xl border border-white/10 bg-white/5 p-5">
+              <div class="rounded-3xl border border-black/10 bg-black/5 p-5 dark:border-white/10 dark:bg-white/5">
                 <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Started</p>
-                <p class="mt-2 text-sm font-medium text-slate-100">{{ formatDateTime(session.createdAt) }}</p>
+                <p class="mt-2 text-sm font-medium text-slate-800 dark:text-slate-100">{{ formatDateTime(session.createdAt) }}</p>
               </div>
             </div>
 
-            <div class="rounded-3xl border border-white/10 bg-white/5 p-5">
+            <div class="rounded-3xl border border-black/10 bg-black/5 p-5 dark:border-white/10 dark:bg-white/5">
               <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Next step</p>
-              <p class="mt-2 text-sm font-medium text-slate-100">{{ getNextStepLabel(session) }}</p>
+              <p class="mt-2 text-sm font-medium text-slate-800 dark:text-slate-100">{{ getNextStepLabel(session) }}</p>
               <p class="mt-2 text-xs text-slate-500">This upload window stays available until {{ formatDateTime(session.expiresAt) }} · {{ formatRelativeTime(session.expiresAt) }}</p>
             </div>
 
             @if (uploadProgress() > 0 && session.uploadRequired) {
               <div>
-                <div class="mb-2 flex items-center justify-between text-sm text-slate-300">
+                <div class="mb-2 flex items-center justify-between text-sm text-slate-600 dark:text-slate-300">
                   <span>Upload progress</span>
                   <span>{{ uploadProgress() }}%</span>
                 </div>
-                <div class="h-3 overflow-hidden rounded-full bg-slate-800">
-                  <div class="h-full rounded-full bg-cyan-400 transition-all" [style.width.%]="uploadProgress()"></div>
+                <div class="h-3 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
+                  <div class="h-full rounded-full bg-cyan-500 transition-all dark:bg-cyan-400" [style.width.%]="uploadProgress()"></div>
                 </div>
               </div>
             }
@@ -151,17 +152,17 @@
       </section>
 
       @if (committedManifest(); as manifest) {
-        <section class="rounded-[2rem] border border-emerald-400/25 bg-emerald-500/10 p-5 shadow-2xl shadow-emerald-950/20 sm:p-6">
-          <p class="text-sm font-semibold text-emerald-100">Upload complete</p>
-          <p class="mt-2 text-lg font-semibold text-white">{{ getFileName(manifest.logicalPath) }}</p>
+        <section class="rounded-[2rem] border border-emerald-500/30 bg-emerald-500/8 p-5 shadow-2xl sm:p-6 dark:border-emerald-400/25 dark:bg-emerald-500/10">
+          <p class="text-sm font-semibold text-emerald-700 dark:text-emerald-100">Upload complete</p>
+          <p class="mt-2 text-lg font-semibold text-slate-900 dark:text-white">{{ getFileName(manifest.logicalPath) }}</p>
           <div class="mt-4 grid gap-3 sm:grid-cols-2">
-            <div class="rounded-2xl border border-emerald-300/20 bg-slate-950/40 p-4">
-              <p class="text-xs uppercase tracking-[0.24em] text-emerald-200/70">Folder</p>
-              <p class="mt-2 break-all text-sm font-medium text-white">{{ getFolderPath(manifest.logicalPath) }}</p>
+            <div class="rounded-2xl border border-emerald-500/20 bg-black/5 p-4 dark:border-emerald-300/20 dark:bg-slate-950/40">
+              <p class="text-xs uppercase tracking-[0.24em] text-emerald-600/80 dark:text-emerald-200/70">Folder</p>
+              <p class="mt-2 break-all text-sm font-medium text-slate-900 dark:text-white">{{ getFolderPath(manifest.logicalPath) }}</p>
             </div>
-            <div class="rounded-2xl border border-emerald-300/20 bg-slate-950/40 p-4">
-              <p class="text-xs uppercase tracking-[0.24em] text-emerald-200/70">Saved on</p>
-              <p class="mt-2 text-sm font-medium text-white">{{ formatDateTime(manifest.createdAt) }}</p>
+            <div class="rounded-2xl border border-emerald-500/20 bg-black/5 p-4 dark:border-emerald-300/20 dark:bg-slate-950/40">
+              <p class="text-xs uppercase tracking-[0.24em] text-emerald-600/80 dark:text-emerald-200/70">Saved on</p>
+              <p class="mt-2 text-sm font-medium text-slate-900 dark:text-white">{{ formatDateTime(manifest.createdAt) }}</p>
             </div>
           </div>
         </section>

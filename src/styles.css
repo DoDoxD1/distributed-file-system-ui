@@ -3,22 +3,71 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
+  html {
+    @apply h-full;
     color-scheme: dark;
+
+    --bg-page: theme('colors.slate.950');
+    --bg-surface: rgba(255,255,255,0.05);
+    --bg-surface-hover: rgba(255,255,255,0.08);
+    --border-subtle: rgba(255,255,255,0.10);
+    --text-primary: theme('colors.slate.100');
+    --text-secondary: theme('colors.slate.400');
+    --text-muted: theme('colors.slate.500');
+    --header-bg: rgba(2,6,23,0.85);
+    --scrollbar-track: rgba(15,23,42,0.7);
+    --scrollbar-thumb: rgba(148,163,184,0.35);
+    --scrollbar-thumb-hover: rgba(148,163,184,0.5);
   }
 
-  html {
-    @apply h-full bg-slate-950;
+  html.dark {
+    color-scheme: dark;
+    --bg-page: theme('colors.slate.950');
+    --bg-surface: rgba(255,255,255,0.05);
+    --bg-surface-hover: rgba(255,255,255,0.08);
+    --border-subtle: rgba(255,255,255,0.10);
+    --text-primary: theme('colors.slate.100');
+    --text-secondary: theme('colors.slate.400');
+    --text-muted: theme('colors.slate.500');
+    --header-bg: rgba(2,6,23,0.85);
+    --scrollbar-track: rgba(15,23,42,0.7);
+    --scrollbar-thumb: rgba(148,163,184,0.35);
+    --scrollbar-thumb-hover: rgba(148,163,184,0.5);
+  }
+
+  html:not(.dark) {
+    color-scheme: light;
+    --bg-page: theme('colors.slate.100');
+    --bg-surface: rgba(0,0,0,0.04);
+    --bg-surface-hover: rgba(0,0,0,0.06);
+    --border-subtle: rgba(0,0,0,0.10);
+    --text-primary: theme('colors.slate.900');
+    --text-secondary: theme('colors.slate.600');
+    --text-muted: theme('colors.slate.500');
+    --header-bg: rgba(248,250,252,0.90);
+    --scrollbar-track: rgba(226,232,240,0.8);
+    --scrollbar-thumb: rgba(100,116,139,0.35);
+    --scrollbar-thumb-hover: rgba(100,116,139,0.55);
   }
 
   body {
-    @apply min-h-full bg-slate-950 text-slate-100 antialiased;
+    min-height: 100%;
+    background-color: var(--bg-page);
+    color: var(--text-primary);
+    @apply antialiased;
     background-image:
       radial-gradient(circle at top left, rgba(34, 211, 238, 0.12), transparent 32%),
       radial-gradient(circle at top right, rgba(56, 189, 248, 0.08), transparent 28%),
-      linear-gradient(180deg, rgba(15, 23, 42, 1) 0%, rgba(2, 6, 23, 1) 100%);
+      linear-gradient(180deg, var(--bg-page) 0%, var(--bg-page) 100%);
     font-family:
       Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  html:not(.dark) body {
+    background-image:
+      radial-gradient(circle at top left, rgba(6, 182, 212, 0.09), transparent 32%),
+      radial-gradient(circle at top right, rgba(14, 165, 233, 0.06), transparent 28%),
+      linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
   }
 
   body,
@@ -34,7 +83,8 @@
   }
 
   ::selection {
-    @apply bg-cyan-300/30 text-white;
+    @apply bg-cyan-300/30;
+    color: var(--text-primary);
   }
 
   ::-webkit-scrollbar {
@@ -43,19 +93,21 @@
   }
 
   ::-webkit-scrollbar-track {
-    background: rgba(15, 23, 42, 0.7);
+    background: var(--scrollbar-track);
   }
 
   ::-webkit-scrollbar-thumb {
-    background: rgba(148, 163, 184, 0.35);
+    background: var(--scrollbar-thumb);
     border-radius: 9999px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(148, 163, 184, 0.5);
+    background: var(--scrollbar-thumb-hover);
   }
 
   code {
-    @apply rounded-md bg-white/5 px-1.5 py-0.5 text-[0.85em] text-cyan-200;
+    @apply rounded-md px-1.5 py-0.5 text-[0.85em] text-cyan-500;
+    background: var(--bg-surface);
   }
 }
+

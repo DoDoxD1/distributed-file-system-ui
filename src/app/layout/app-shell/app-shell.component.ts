@@ -4,6 +4,7 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 
 import { AuthService } from '../../core/services/auth.service';
 import { FileCacheService } from '../../core/services/file-cache.service';
+import { ThemeService } from '../../core/services/theme.service';
 import { ToastService } from '../../core/services/toast.service';
 
 interface NavigationItem {
@@ -23,6 +24,7 @@ export class AppShellComponent {
   private readonly toast = inject(ToastService);
   private readonly fileCache = inject(FileCacheService);
   protected readonly auth = inject(AuthService);
+  protected readonly themeService = inject(ThemeService);
   protected readonly menuOpen = signal(false);
 
   private readonly navigationItems: NavigationItem[] = [

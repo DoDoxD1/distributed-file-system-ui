@@ -3,8 +3,10 @@
   [class.cursor-pointer]="!disabled"
   [class.border-cyan-400/70]="isDragging"
   [class.bg-cyan-400/10]="isDragging"
-  [class.border-slate-700]="!isDragging"
-  [class.bg-slate-900/60]="!isDragging"
+  [class.border-slate-300]="!isDragging"
+  [class.bg-black/3]="!isDragging"
+  [class.dark:border-slate-700]="!isDragging"
+  [class.dark:bg-slate-900/60]="!isDragging"
   [class.opacity-60]="disabled"
   (dragover)="handleDragOver($event)"
   (dragleave)="handleDragLeave($event)"
@@ -19,17 +21,17 @@
   >
 
   <div class="flex flex-col gap-3 text-center">
-    <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-800 text-2xl text-cyan-300">
+    <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-2xl text-cyan-600 dark:bg-slate-800 dark:text-cyan-300">
       ↑
     </div>
     <div>
-      <p class="text-base font-semibold text-white">{{ label }}</p>
-      <p class="mt-1 text-sm text-slate-400">{{ hint }}</p>
+      <p class="text-base font-semibold text-slate-900 dark:text-white">{{ label }}</p>
+      <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ hint }}</p>
     </div>
     @if (fileName) {
-      <div class="rounded-2xl border border-slate-700 bg-slate-950/60 px-4 py-3 text-left">
+      <div class="rounded-2xl border border-black/10 bg-black/5 px-4 py-3 text-left dark:border-slate-700 dark:bg-slate-950/60">
         <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Selected file</p>
-        <p class="mt-1 truncate text-sm font-medium text-slate-100">{{ fileName }}</p>
+        <p class="mt-1 truncate text-sm font-medium text-slate-800 dark:text-slate-100">{{ fileName }}</p>
       </div>
     }
   </div>

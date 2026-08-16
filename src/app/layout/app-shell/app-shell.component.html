@@ -1,33 +1,41 @@
-<div class="min-h-screen bg-slate-950 text-slate-100">
-  <header class="sticky top-0 z-30 border-b border-white/10 bg-slate-950/85 backdrop-blur-xl">
+<div class="min-h-screen" style="background-color: var(--bg-page); color: var(--text-primary)">
+  <header class="sticky top-0 z-30 border-b border-black/10 backdrop-blur-xl dark:border-white/10" style="background-color: var(--header-bg)">
     <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
       <div class="flex items-center gap-4">
         <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-400/15 text-lg font-semibold text-cyan-300 shadow-lg shadow-cyan-950/40">
           DFS
         </div>
         <div>
-          <p class="text-xs uppercase tracking-[0.3em] text-cyan-300/80">Distributed File Storage System</p>
-          <h1 class="text-lg font-semibold text-white sm:text-xl">Your storage</h1>
+          <p class="text-xs uppercase tracking-[0.3em] text-cyan-600/80 dark:text-cyan-300/80">Distributed File Storage System</p>
+          <h1 class="text-lg font-semibold text-slate-900 sm:text-xl dark:text-white">Your storage</h1>
         </div>
       </div>
 
       <div class="hidden items-center gap-3 md:flex">
         @if (auth.user(); as user) {
-          <div class="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-right">
+          <div class="rounded-2xl border border-black/10 bg-black/5 px-4 py-2 text-right dark:border-white/10 dark:bg-white/5">
             <div class="flex items-center justify-end gap-2">
-              <p class="text-sm font-medium text-white">{{ user.email }}</p>
+              <p class="text-sm font-medium text-slate-900 dark:text-white">{{ user.email }}</p>
               @if (user.isAdmin) {
                 <span class="rounded-full border border-amber-400/30 bg-amber-400/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.24em] text-amber-200">
                   Admin
                 </span>
               }
             </div>
-            <p class="text-xs text-slate-400">Signed in</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Signed in</p>
           </div>
         }
         <button
           type="button"
-          class="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-100 transition hover:border-cyan-400/40 hover:bg-cyan-400/10"
+          class="flex h-10 w-10 items-center justify-center rounded-2xl border border-black/10 bg-black/5 text-lg transition hover:bg-cyan-400/10 dark:border-white/10 dark:bg-white/5"
+          (click)="themeService.toggle()"
+          [attr.aria-label]="themeService.theme() === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
+        >
+          {{ themeService.theme() === 'dark' ? '☀️' : '🌙' }}
+        </button>
+        <button
+          type="button"
+          class="rounded-2xl border border-black/10 bg-black/5 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-cyan-400/10 dark:border-white/10 dark:bg-white/5 dark:text-slate-100"
           (click)="logout()"
         >
           Logout
@@ -36,7 +44,7 @@
 
       <button
         type="button"
-        class="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-white md:hidden"
+        class="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-black/10 bg-black/5 text-slate-700 md:hidden dark:border-white/10 dark:bg-white/5 dark:text-white"
         (click)="toggleMenu()"
         aria-label="Toggle navigation"
       >
@@ -44,13 +52,13 @@
       </button>
     </div>
 
-    <div class="border-t border-white/10 px-4 py-3 md:hidden" [class.hidden]="!menuOpen()">
+    <div class="border-t border-black/10 px-4 py-3 md:hidden dark:border-white/10" [class.hidden]="!menuOpen()">
       <nav class="grid grid-cols-2 gap-2">
         @for (item of navItems(); track item.route) {
           <a
             [routerLink]="item.route"
-            routerLinkActive="border-cyan-400/40 bg-cyan-400/15 text-white"
-            class="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-slate-300 transition"
+            routerLinkActive="border-cyan-400/40 bg-cyan-400/15 text-cyan-700 dark:text-white"
+            class="rounded-2xl border border-black/10 bg-black/5 px-4 py-3 text-sm font-medium text-slate-600 transition dark:border-white/10 dark:bg-white/5 dark:text-slate-300"
             (click)="menuOpen.set(false)"
           >
             {{ item.label }}
@@ -58,7 +66,14 @@
         }
         <button
           type="button"
-          class="col-span-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-slate-100"
+          class="rounded-2xl border border-black/10 bg-black/5 px-4 py-3 text-sm font-medium text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-100"
+          (click)="themeService.toggle()"
+        >
+          {{ themeService.theme() === 'dark' ? '☀️ Light mode' : '🌙 Dark mode' }}
+        </button>
+        <button
+          type="button"
+          class="rounded-2xl border border-black/10 bg-black/5 px-4 py-3 text-sm font-medium text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-100"
           (click)="logout()"
         >
           Logout
@@ -70,16 +85,16 @@
   @if (auth.isAdmin()) {
     <div class="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[18rem_minmax(0,1fr)] lg:px-8 lg:py-8">
       <aside class="hidden lg:block">
-        <div class="sticky top-28 space-y-6 rounded-[2rem] border border-white/10 bg-white/5 p-4 shadow-2xl shadow-slate-950/40 backdrop-blur-xl">
+        <div class="sticky top-28 space-y-6 rounded-[2rem] border border-black/10 bg-black/5 p-4 shadow-2xl shadow-slate-200/50 backdrop-blur-xl dark:border-white/10 dark:bg-white/5 dark:shadow-slate-950/40">
           <nav class="space-y-2">
             @for (item of navItems(); track item.route) {
               <a
                 [routerLink]="item.route"
-                routerLinkActive="bg-cyan-400/15 text-white shadow-inner shadow-cyan-400/10"
-                class="flex items-center justify-between rounded-2xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white"
+                routerLinkActive="bg-cyan-400/15 text-cyan-700 shadow-inner shadow-cyan-400/10 dark:text-white"
+                class="flex items-center justify-between rounded-2xl px-4 py-3 text-sm font-medium text-slate-600 transition hover:bg-black/5 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white"
               >
                 <span>{{ item.label }}</span>
-                <span class="text-slate-500">›</span>
+                <span class="text-slate-400 dark:text-slate-500">›</span>
               </a>
             }
           </nav>
@@ -87,12 +102,12 @@
       </aside>
       <main class="min-w-0 space-y-6">
         <div class="overflow-x-auto lg:hidden">
-          <div class="flex min-w-max gap-2 rounded-3xl border border-white/10 bg-white/5 p-2 backdrop-blur-xl">
+          <div class="flex min-w-max gap-2 rounded-3xl border border-black/10 bg-black/5 p-2 backdrop-blur-xl dark:border-white/10 dark:bg-white/5">
             @for (item of navItems(); track item.route) {
               <a
                 [routerLink]="item.route"
-                routerLinkActive="bg-cyan-400/15 text-white"
-                class="rounded-2xl px-4 py-2 text-sm font-medium text-slate-300"
+                routerLinkActive="bg-cyan-400/15 text-cyan-700 dark:text-white"
+                class="rounded-2xl px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300"
               >
                 {{ item.shortLabel }}
               </a>
