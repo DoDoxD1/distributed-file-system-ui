@@ -1,13 +1,12 @@
 ﻿import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
+import { DomSanitizer, type SafeResourceUrl } from '@angular/platform-browser';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
 import { FileListingResponse, FileManifestResponse } from '../../../core/models/api.models';
 import { FilesService } from '../../../core/services/files.service';
 import { ToastService } from '../../../core/services/toast.service';
-import { encodePathToBase64Url } from '../../../core/utils/encoding.util';
 import {
   type FolderNode as FolderNodeType,
   base64ToBlob,
@@ -29,6 +28,22 @@ type TreeEntry =
   | { kind: 'folder'; node: FolderNodeType; depth: number }
   | { kind: 'file'; file: FileListingResponse; depth: number };
 
+type PreviewType = 'image' | 'text' | 'pdf' | 'none';
+
+const getPreviewType = (filename: string): PreviewType => {
+  const ext = filename.split('.').pop()?.toLowerCase() ?? '';
+  if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico'].includes(ext)) return 'image';
+  if (['pdf'].includes(ext)) return 'pdf';
+  if (['txt', 'md', 'json', 'csv', 'xml', 'yaml', 'yml', 'log', 'ts', 'js', 'html', 'css', 'sh', 'env'].includes(ext)) return 'text';
+  return 'none';
+};
+
+const PREVIEW_MIME: Record<string, string> = {
+  jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif',
+  webp: 'image/webp', svg: 'image/svg+xml', bmp: 'image/bmp', ico: 'image/x-icon',
+  pdf: 'application/pdf'
+};
+
 @Component({
   selector: 'app-files-dashboard-page',
   standalone: true,
@@ -44,7 +59,7 @@ type TreeEntry =
 })
 export class FilesDashboardPageComponent {
   private readonly filesService = inject(FilesService);
-  private readonly router = inject(Router);
+  private readonly sanitizer = inject(DomSanitizer);
   private readonly toast = inject(ToastService);
 
   protected readonly searchForm = new FormGroup({
@@ -86,12 +101,24 @@ export class FilesDashboardPageComponent {
     return entries;
   });
   protected readonly selectedFile = signal<FileListingResponse | null>(null);
-  protected readonly selectedManifest = signal<FileManifestResponse | null>(null);
   protected readonly selectedUploadFile = signal<File | null>(null);
+  protected readonly previewFile = signal<FileListingResponse | null>(null);
+  protected readonly previewObjectUrl = signal<string | null>(null);
+  protected readonly safePdfUrl = computed<SafeResourceUrl | null>(() => {
+    const url = this.previewObjectUrl();
+    return url && this.previewType() === 'pdf' ? this.sanitizer.bypassSecurityTrustResourceUrl(url) : null;
+  });
+  protected readonly safeImageUrl = computed<SafeResourceUrl | null>(() => {
+    const url = this.previewObjectUrl();
+    return url && this.previewType() === 'image' ? this.sanitizer.bypassSecurityTrustUrl(url) : null;
+  });
+  protected readonly previewText = signal<string | null>(null);
+  protected readonly previewType = signal<PreviewType>('none');
+  protected readonly previewModalOpen = signal(false);
+  protected readonly isLoadingPreview = signal(false);
   protected readonly uploadResult = signal<FileManifestResponse | null>(null);
   protected readonly uploadRequestKey = signal(createIdempotencyKey());
   protected readonly isLoadingFiles = signal(true);
-  protected readonly isLoadingManifest = signal(false);
   protected readonly isUploading = signal(false);
   protected readonly uploadModalOpen = signal(false);
   protected readonly listError = signal('');
@@ -116,13 +143,12 @@ export class FilesDashboardPageComponent {
 
       if (!files.length) {
         this.selectedFile.set(null);
-        this.selectedManifest.set(null);
         return;
       }
 
       const currentSelection = this.selectedFile()?.logicalPath;
       const matchedFile = files.find((file) => file.logicalPath === currentSelection) ?? files[0];
-      await this.selectFile(matchedFile);
+      this.selectFile(matchedFile);
     } catch (error) {
       const message = getErrorMessage(error, 'The file list could not be loaded.');
       this.listError.set(message);
@@ -132,20 +158,53 @@ export class FilesDashboardPageComponent {
     }
   }
 
-  protected async selectFile(file: FileListingResponse): Promise<void> {
+  protected selectFile(file: FileListingResponse): void {
     this.selectedFile.set(file);
-    this.isLoadingManifest.set(true);
+  }
+
+  protected async openPreview(file: FileListingResponse): Promise<void> {
+    const prevUrl = this.previewObjectUrl();
+    if (prevUrl) {
+      URL.revokeObjectURL(prevUrl);
+      this.previewObjectUrl.set(null);
+    }
+    this.previewText.set(null);
+    this.previewFile.set(file);
+    this.previewModalOpen.set(true);
+    this.isLoadingPreview.set(true);
+
+    const filename = extractFileName(file.logicalPath);
+    const type = getPreviewType(filename);
+    this.previewType.set(type);
 
     try {
-      const manifest = await firstValueFrom(this.filesService.getManifest(file.logicalPath));
-      this.selectedManifest.set(manifest);
+      const response = await firstValueFrom(this.filesService.downloadFile(file.logicalPath));
+      const ext = filename.split('.').pop()?.toLowerCase() ?? '';
+      const mime = PREVIEW_MIME[ext] ?? 'application/octet-stream';
+      const blob = base64ToBlob(response.payloadBase64, mime);
+
+      if (type === 'text') {
+        this.previewText.set(await blob.text());
+      } else if (type === 'image' || type === 'pdf') {
+        this.previewObjectUrl.set(URL.createObjectURL(blob));
+      }
     } catch (error) {
-      const message = getErrorMessage(error, 'The file details could not be loaded.');
-      this.selectedManifest.set(null);
-      this.toast.error('Unable to load file details', message);
+      const message = getErrorMessage(error, 'The file preview could not be loaded.');
+      this.toast.error('Preview failed', message);
+      this.previewModalOpen.set(false);
     } finally {
-      this.isLoadingManifest.set(false);
+      this.isLoadingPreview.set(false);
     }
+  }
+
+  protected closePreview(): void {
+    const url = this.previewObjectUrl();
+    if (url) {
+      URL.revokeObjectURL(url);
+      this.previewObjectUrl.set(null);
+    }
+    this.previewText.set(null);
+    this.previewModalOpen.set(false);
   }
 
   protected handleUploadFileSelected(file: File): void {
@@ -208,20 +267,6 @@ export class FilesDashboardPageComponent {
     }
   }
 
-  protected async downloadManifest(manifest: FileManifestResponse): Promise<void> {
-    try {
-      const response = await firstValueFrom(
-        this.filesService.downloadFile(manifest.logicalPath, manifest.versionId)
-      );
-      const blob = base64ToBlob(response.payloadBase64);
-      triggerBrowserDownload(extractFileName(manifest.logicalPath), blob);
-      this.toast.success('Download ready', `${extractFileName(manifest.logicalPath)} is ready.`);
-    } catch (error) {
-      const message = getErrorMessage(error, 'The file could not be downloaded.');
-      this.toast.error('Download failed', message);
-    }
-  }
-
   protected toggleFolder(path: string): void {
     this.expandedFolders.update((current) => {
       const next = new Set(current);
@@ -252,7 +297,4 @@ export class FilesDashboardPageComponent {
     this.uploadModalOpen.set(false);
   }
 
-  protected openDetails(logicalPath: string): void {
-    void this.router.navigate(['/files', encodePathToBase64Url(logicalPath)]);
-  }
 }
