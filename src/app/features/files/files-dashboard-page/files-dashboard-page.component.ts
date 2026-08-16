@@ -5,6 +5,7 @@ import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { firstValueFrom } from 'rxjs';
 
 import { FileListingResponse, FileManifestResponse } from '../../../core/models/api.models';
+import { FileCacheService } from '../../../core/services/file-cache.service';
 import { FilesService } from '../../../core/services/files.service';
 import { ToastService } from '../../../core/services/toast.service';
 import {
@@ -59,8 +60,11 @@ const PREVIEW_MIME: Record<string, string> = {
 })
 export class FilesDashboardPageComponent {
   private readonly filesService = inject(FilesService);
+  private readonly fileCache = inject(FileCacheService);
   private readonly sanitizer = inject(DomSanitizer);
   private readonly toast = inject(ToastService);
+
+  private static readonly LISTING_CACHE_KEY = 'all';
 
   protected readonly searchQuery = signal('');
   protected readonly uploadForm = new FormGroup({
@@ -138,28 +142,41 @@ export class FilesDashboardPageComponent {
   }
 
   protected async refreshFiles(): Promise<void> {
-    this.isLoadingFiles.set(true);
     this.listError.set('');
+
+    const cached = await this.fileCache.getListing(FilesDashboardPageComponent.LISTING_CACHE_KEY);
+    if (cached) {
+      this.applyFileList(cached);
+    } else {
+      this.isLoadingFiles.set(true);
+    }
 
     try {
       const files = await firstValueFrom(this.filesService.listFiles());
-      this.files.set(files);
-
-      if (!files.length) {
-        this.selectedFile.set(null);
-        return;
-      }
-
-      const currentSelection = this.selectedFile()?.logicalPath;
-      const matchedFile = files.find((file) => file.logicalPath === currentSelection) ?? files[0];
-      this.selectFile(matchedFile);
+      void this.fileCache.putListing(FilesDashboardPageComponent.LISTING_CACHE_KEY, files);
+      this.applyFileList(files);
     } catch (error) {
-      const message = getErrorMessage(error, 'The file list could not be loaded.');
-      this.listError.set(message);
-      this.toast.error('Unable to load files', message);
+      if (!cached) {
+        const message = getErrorMessage(error, 'The file list could not be loaded.');
+        this.listError.set(message);
+        this.toast.error('Unable to load files', message);
+      }
     } finally {
       this.isLoadingFiles.set(false);
     }
+  }
+
+  private applyFileList(files: FileListingResponse[]): void {
+    this.files.set(files);
+
+    if (!files.length) {
+      this.selectedFile.set(null);
+      return;
+    }
+
+    const currentSelection = this.selectedFile()?.logicalPath;
+    const matchedFile = files.find((f) => f.logicalPath === currentSelection) ?? files[0];
+    this.selectFile(matchedFile);
   }
 
   protected selectFile(file: FileListingResponse): void {
@@ -182,7 +199,12 @@ export class FilesDashboardPageComponent {
     this.previewType.set(type);
 
     try {
-      const response = await firstValueFrom(this.filesService.downloadFile(file.logicalPath));
+      let response = await this.fileCache.getContent(file.logicalPath, file.latestVersionId);
+      if (!response) {
+        response = await firstValueFrom(this.filesService.downloadFile(file.logicalPath));
+        void this.fileCache.putContent(file.logicalPath, file.latestVersionId, response);
+      }
+
       const ext = filename.split('.').pop()?.toLowerCase() ?? '';
       const mime = PREVIEW_MIME[ext] ?? 'application/octet-stream';
       const blob = base64ToBlob(response.payloadBase64, mime);
@@ -249,6 +271,10 @@ export class FilesDashboardPageComponent {
       this.uploadRequestKey.set(createIdempotencyKey());
       this.uploadModalOpen.set(false);
       this.toast.success('Upload complete', `${extractFileName(manifest.logicalPath)} has been saved.`);
+      await Promise.all([
+        this.fileCache.invalidateListing(FilesDashboardPageComponent.LISTING_CACHE_KEY),
+        this.fileCache.evictContent(manifest.logicalPath)
+      ]);
       await this.refreshFiles();
     } catch (error) {
       const message = getErrorMessage(error, 'The file could not be uploaded.');
@@ -275,6 +301,10 @@ export class FilesDashboardPageComponent {
 
     try {
       await firstValueFrom(this.filesService.deleteFile(file.logicalPath));
+      await Promise.all([
+        this.fileCache.invalidateListing(FilesDashboardPageComponent.LISTING_CACHE_KEY),
+        this.fileCache.evictContent(file.logicalPath)
+      ]);
       this.files.update((current) => current.filter((f) => f.logicalPath !== file.logicalPath));
       this.pendingDeleteFile.set(null);
       this.toast.success('File deleted', `${extractFileName(file.logicalPath)} has been removed.`);
@@ -288,7 +318,11 @@ export class FilesDashboardPageComponent {
 
   protected async downloadFile(file: FileListingResponse): Promise<void> {
     try {
-      const response = await firstValueFrom(this.filesService.downloadFile(file.logicalPath));
+      let response = await this.fileCache.getContent(file.logicalPath, file.latestVersionId);
+      if (!response) {
+        response = await firstValueFrom(this.filesService.downloadFile(file.logicalPath));
+        void this.fileCache.putContent(file.logicalPath, file.latestVersionId, response);
+      }
       const blob = base64ToBlob(response.payloadBase64);
       triggerBrowserDownload(extractFileName(file.logicalPath), blob);
       this.toast.success('Download ready', `${extractFileName(file.logicalPath)} is ready.`);
