@@ -34,77 +34,7 @@ const isoInstantValidator = (
   selector: 'app-workers-page',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, InlineAlertComponent],
-  template: `
-    <section class="space-y-6">
-      <div class="rounded-[2rem] border border-white/10 bg-gradient-to-br from-amber-400/15 via-slate-900 to-slate-950 p-6 shadow-2xl shadow-amber-950/20 sm:p-8">
-        <p class="text-sm uppercase tracking-[0.34em] text-amber-200/80">Admin Workers</p>
-        <h2 class="mt-3 text-3xl font-semibold tracking-tight text-white">Privileged maintenance operations</h2>
-        <p class="mt-3 max-w-3xl text-sm text-slate-300 sm:text-base">
-          Run backend worker jobs for pruning, repair, garbage collection, and migration. These controls are route-guarded and only rendered for administrator sessions.
-        </p>
-      </div>
-
-      <div class="grid gap-6 xl:grid-cols-2">
-        @for (worker of workerCards; track worker.key) {
-          <section class="rounded-[2rem] border border-white/10 bg-slate-900/80 p-6 shadow-2xl shadow-slate-950/30 backdrop-blur-xl">
-            <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <p class="text-lg font-semibold text-white">{{ worker.title }}</p>
-                <p class="mt-2 text-sm text-slate-400">{{ worker.description }}</p>
-                <p class="mt-3 text-xs uppercase tracking-[0.24em] text-slate-500">{{ worker.endpoint }}</p>
-              </div>
-              <button
-                type="button"
-                class="rounded-2xl bg-cyan-400 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
-                [disabled]="runningWorker() === worker.key"
-                (click)="runWorker(worker.key)"
-              >
-                {{ runningWorker() === worker.key ? 'Running…' : worker.buttonLabel }}
-              </button>
-            </div>
-
-            @if (worker.key === 'gc') {
-              <div class="mt-5 rounded-3xl border border-white/10 bg-white/5 p-5">
-                <label class="mb-2 block text-sm font-medium text-slate-200" for="reference-time">Reference time (optional)</label>
-                <input
-                  id="reference-time"
-                  type="text"
-                  [formControl]="referenceTimeControl"
-                  class="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-cyan-400/60"
-                  placeholder="2026-08-16T12:34:56Z"
-                >
-                @if (referenceTimeControl.invalid && referenceTimeControl.touched) {
-                  <p class="mt-2 text-sm text-rose-300">Use an ISO-8601 instant such as 2026-08-16T12:34:56Z.</p>
-                }
-              </div>
-            }
-
-            @if (errorFor(worker.key)) {
-              <div class="mt-5">
-                <app-inline-alert title="Worker failed" [message]="errorFor(worker.key)" tone="error"></app-inline-alert>
-              </div>
-            }
-
-            @if (resultFor(worker.key); as result) {
-              <div class="mt-5 rounded-3xl border border-emerald-400/25 bg-emerald-500/10 p-5">
-                <div class="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p class="text-sm font-semibold text-emerald-100">Last successful run</p>
-                    <p class="mt-2 text-base font-semibold text-white">{{ result.worker }}</p>
-                  </div>
-                  <div class="rounded-2xl border border-emerald-300/20 bg-slate-950/40 px-4 py-3 text-right">
-                    <p class="text-xs uppercase tracking-[0.24em] text-emerald-200/70">Affected count</p>
-                    <p class="mt-2 text-2xl font-semibold text-white">{{ result.affectedCount }}</p>
-                  </div>
-                </div>
-                <p class="mt-4 text-sm text-emerald-100/80">Completed {{ formatDateTime(lastRunTimes()[worker.key] || null) }}</p>
-              </div>
-            }
-          </section>
-        }
-      </div>
-    </section>
-  `
+  templateUrl: './workers-page.component.html'
 })
 export class WorkersPageComponent {
   private readonly workersService = inject(WorkersService);

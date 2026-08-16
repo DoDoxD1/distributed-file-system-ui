@@ -7,18 +7,7 @@ import { ToastTone } from '../../../core/services/toast.service';
   selector: 'app-inline-alert',
   standalone: true,
   imports: [NgClass],
-  template: `
-    <div
-      class="rounded-2xl border px-4 py-3 text-sm"
-      [ngClass]="toneClasses[tone]"
-      role="alert"
-    >
-      <p class="font-semibold">{{ title }}</p>
-      @if (message) {
-        <p class="mt-1 text-sm/6 opacity-90">{{ message }}</p>
-      }
-    </div>
-  `
+  templateUrl: './inline-alert.component.html'
 })
 export class InlineAlertComponent {
   @Input() title = 'Notice';

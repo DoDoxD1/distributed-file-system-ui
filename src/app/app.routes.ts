@@ -47,7 +47,8 @@ export const routes: Routes = [
       },
       {
         path: 'system',
-        component: SystemPageComponent
+        component: SystemPageComponent,
+        canActivate: [adminGuard]
       },
       {
         path: 'workers',
