@@ -11,6 +11,7 @@ import { encodePathToBase64Url } from '../../../core/utils/encoding.util';
 import {
   base64ToBlob,
   extractFileName,
+  extractParentFolder,
   fileToBase64,
   triggerBrowserDownload
 } from '../../../core/utils/file.util';
@@ -39,9 +40,9 @@ import { LoadingStateComponent } from '../../../shared/components/loading-state/
         <div class="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
           <div>
             <p class="text-sm uppercase tracking-[0.34em] text-cyan-300/80">Files</p>
-            <h2 class="mt-3 text-3xl font-semibold tracking-tight text-white">Browse manifests and upload new content</h2>
+            <h2 class="mt-3 text-3xl font-semibold tracking-tight text-white">Browse and download your files</h2>
             <p class="mt-3 max-w-2xl text-sm text-slate-300 sm:text-base">
-              Search by logical path prefix, inspect the latest manifest for any file, and use the standard API upload when you need a direct JSON-based write.
+              Search by folder, open a file to see more details, or upload a new file to save it in your storage space.
             </p>
           </div>
 
@@ -50,7 +51,7 @@ import { LoadingStateComponent } from '../../../shared/components/loading-state/
               type="text"
               [formControl]="prefixControl"
               class="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-cyan-400/60"
-              placeholder="Search by prefix, e.g. /docs"
+              placeholder="Search by folder, for example /docs"
             >
             <button
               type="submit"
@@ -66,8 +67,8 @@ import { LoadingStateComponent } from '../../../shared/components/loading-state/
         <section class="space-y-4 rounded-[2rem] border border-white/10 bg-slate-900/80 p-5 shadow-2xl shadow-slate-950/30 backdrop-blur-xl sm:p-6">
           <div class="flex items-center justify-between gap-4">
             <div>
-              <p class="text-sm font-semibold text-white">Indexed files</p>
-              <p class="text-sm text-slate-400">{{ files().length }} file{{ files().length === 1 ? '' : 's' }} returned</p>
+              <p class="text-sm font-semibold text-white">Your files</p>
+              <p class="text-sm text-slate-400">{{ files().length }} item{{ files().length === 1 ? '' : 's' }}</p>
             </div>
             <button
               type="button"
@@ -79,43 +80,63 @@ import { LoadingStateComponent } from '../../../shared/components/loading-state/
           </div>
 
           @if (listError()) {
-            <app-inline-alert title="Unable to load files" [message]="listError()" tone="error"></app-inline-alert>
+            <app-inline-alert title="We couldn't load your files" [message]="listError()" tone="error"></app-inline-alert>
           }
 
           @if (isLoadingFiles()) {
             <app-loading-state
-              title="Loading files"
-              description="Fetching the latest file listing from the API."
+              title="Loading your files"
+              description="Please wait while we fetch the latest items."
             ></app-loading-state>
           } @else if (!files().length) {
             <app-empty-state
               icon="/"
-              title="No files matched your search"
-              description="Try a broader prefix or upload a file using the standard flow on the right."
+              title="No files found"
+              description="Try a different folder search or upload a new file below."
             ></app-empty-state>
           } @else {
-            <div class="max-h-[38rem] space-y-3 overflow-y-auto pr-1">
+            <div class="max-h-[40rem] space-y-3 overflow-y-auto pr-1">
               @for (file of files(); track file.logicalPath) {
-                <button
-                  type="button"
-                  class="block w-full rounded-3xl border px-5 py-4 text-left transition"
+                <article
+                  class="rounded-3xl border px-5 py-4 transition"
                   [class.border-cyan-400/40]="selectedFile()?.logicalPath === file.logicalPath"
                   [class.bg-cyan-400/10]="selectedFile()?.logicalPath === file.logicalPath"
                   [class.border-white/10]="selectedFile()?.logicalPath !== file.logicalPath"
                   [class.bg-white/5]="selectedFile()?.logicalPath !== file.logicalPath"
-                  (click)="selectFile(file)"
                 >
-                  <div class="flex flex-wrap items-start justify-between gap-3">
+                  <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div class="min-w-0">
-                      <p class="truncate text-sm font-semibold text-white">{{ file.logicalPath }}</p>
-                      <p class="mt-1 text-xs uppercase tracking-[0.24em] text-slate-500">Latest version {{ file.latestVersionId }}</p>
+                      <p class="truncate text-base font-semibold text-white">{{ getFileName(file.logicalPath) }}</p>
+                      <p class="mt-1 break-all text-sm text-slate-400">Folder: {{ getFolderPath(file.logicalPath) }}</p>
+                      <p class="mt-3 text-xs uppercase tracking-[0.24em] text-slate-500">
+                        Added {{ formatDateTime(file.createdAt) }}
+                      </p>
                     </div>
-                    <div class="text-right">
-                      <p class="text-sm font-medium text-slate-200">{{ formatBytes(file.sizeBytes) }}</p>
-                      <p class="mt-1 text-xs text-slate-400">{{ formatDateTime(file.createdAt) }}</p>
+
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+                      <div class="rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-left sm:text-right">
+                        <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Size</p>
+                        <p class="mt-2 text-sm font-medium text-slate-100">{{ formatBytes(file.sizeBytes) }}</p>
+                      </div>
+                      <div class="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          class="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-100 transition hover:border-cyan-400/30 hover:bg-cyan-400/10"
+                          (click)="selectFile(file)"
+                        >
+                          View
+                        </button>
+                        <button
+                          type="button"
+                          class="rounded-2xl bg-cyan-400 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300"
+                          (click)="downloadFile(file)"
+                        >
+                          Download
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </button>
+                </article>
               }
             </div>
           }
@@ -123,18 +144,9 @@ import { LoadingStateComponent } from '../../../shared/components/loading-state/
 
         <div class="space-y-6">
           <section class="rounded-[2rem] border border-white/10 bg-slate-900/80 p-5 shadow-2xl shadow-slate-950/30 backdrop-blur-xl sm:p-6">
-            <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <p class="text-sm font-semibold text-white">Standard upload</p>
-                <p class="mt-1 text-sm text-slate-400">Convert the file to base64 and send it through <code class="rounded bg-white/5 px-1.5 py-0.5 text-xs text-cyan-200">POST /api/v1/files</code>.</p>
-              </div>
-              <button
-                type="button"
-                class="rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-slate-200 transition hover:border-cyan-400/30 hover:bg-cyan-400/10"
-                (click)="regenerateIdempotencyKey()"
-              >
-                New key
-              </button>
+            <div>
+              <p class="text-sm font-semibold text-white">Upload a file</p>
+              <p class="mt-1 text-sm text-slate-400">Choose a file and tell us where you want to save it.</p>
             </div>
 
             <form class="mt-6 space-y-5" (ngSubmit)="submitUpload()">
@@ -143,15 +155,15 @@ import { LoadingStateComponent } from '../../../shared/components/loading-state/
               }
 
               <app-dropzone
-                label="Drop a file for standard upload"
-                hint="The file will be converted to base64 before calling the API."
+                label="Drop a file here"
+                hint="You can also click to choose a file from your device."
                 [fileName]="selectedUploadFile()?.name || ''"
                 [disabled]="isUploading()"
                 (fileSelected)="handleUploadFileSelected($event)"
               ></app-dropzone>
 
               <div>
-                <label class="mb-2 block text-sm font-medium text-slate-200" for="logical-path">Logical path</label>
+                <label class="mb-2 block text-sm font-medium text-slate-200" for="logical-path">Save location</label>
                 <input
                   id="logical-path"
                   type="text"
@@ -160,20 +172,9 @@ import { LoadingStateComponent } from '../../../shared/components/loading-state/
                   placeholder="/docs/report.pdf"
                 >
                 @if (logicalPathControl.invalid && logicalPathControl.touched) {
-                  <p class="mt-2 text-sm text-rose-300">Logical paths must start with a forward slash.</p>
+                  <p class="mt-2 text-sm text-rose-300">Please enter a location that starts with /.</p>
                 }
-              </div>
-
-              <div>
-                <label class="mb-2 block text-sm font-medium text-slate-200" for="upload-idempotency-key">Idempotency key</label>
-                <input
-                  id="upload-idempotency-key"
-                  type="text"
-                  [formControl]="idempotencyKeyControl"
-                  class="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-cyan-400/60"
-                  placeholder="Optional idempotency key"
-                >
-                <p class="mt-2 text-xs text-slate-500">Keep the same key for a safe retry if the request or connection fails before you get a response.</p>
+                <p class="mt-2 text-xs text-slate-500">If the upload is interrupted, you can try again safely.</p>
               </div>
 
               <button
@@ -189,8 +190,8 @@ import { LoadingStateComponent } from '../../../shared/components/loading-state/
           <section class="rounded-[2rem] border border-white/10 bg-slate-900/80 p-5 shadow-2xl shadow-slate-950/30 backdrop-blur-xl sm:p-6">
             <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <p class="text-sm font-semibold text-white">Selected file metadata</p>
-                <p class="mt-1 text-sm text-slate-400">Inspect the latest manifest, jump into version history, or download the current content.</p>
+                <p class="text-sm font-semibold text-white">Selected file</p>
+                <p class="mt-1 text-sm text-slate-400">See basic details for the item you selected from the list.</p>
               </div>
               @if (selectedManifest()) {
                 <button
@@ -206,33 +207,33 @@ import { LoadingStateComponent } from '../../../shared/components/loading-state/
             @if (isLoadingManifest()) {
               <div class="mt-6">
                 <app-loading-state
-                  title="Loading manifest"
-                  description="Fetching manifest metadata for the selected file."
+                  title="Loading file details"
+                  description="Please wait while we fetch the latest information for this file."
                 ></app-loading-state>
               </div>
             } @else if (selectedManifest(); as manifest) {
               <div class="mt-6 space-y-4">
                 <div class="rounded-3xl border border-white/10 bg-white/5 p-5">
-                  <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Logical path</p>
-                  <p class="mt-2 break-all text-lg font-semibold text-white">{{ manifest.logicalPath }}</p>
+                  <p class="text-xs uppercase tracking-[0.24em] text-slate-500">File name</p>
+                  <p class="mt-2 break-all text-lg font-semibold text-white">{{ getFileName(manifest.logicalPath) }}</p>
                 </div>
 
                 <div class="grid gap-4 sm:grid-cols-2">
                   <div class="rounded-3xl border border-white/10 bg-white/5 p-5">
-                    <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Latest version</p>
-                    <p class="mt-2 text-sm font-medium text-slate-100">{{ manifest.versionId }}</p>
+                    <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Folder</p>
+                    <p class="mt-2 break-all text-sm font-medium text-slate-100">{{ getFolderPath(manifest.logicalPath) }}</p>
                   </div>
                   <div class="rounded-3xl border border-white/10 bg-white/5 p-5">
                     <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Size</p>
                     <p class="mt-2 text-sm font-medium text-slate-100">{{ formatBytes(manifest.sizeBytes) }}</p>
                   </div>
                   <div class="rounded-3xl border border-white/10 bg-white/5 p-5">
-                    <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Checksum</p>
-                    <p class="mt-2 break-all text-sm font-medium text-slate-100">{{ manifest.checksum }}</p>
+                    <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Saved on</p>
+                    <p class="mt-2 text-sm font-medium text-slate-100">{{ formatDateTime(manifest.createdAt) }}</p>
                   </div>
                   <div class="rounded-3xl border border-white/10 bg-white/5 p-5">
-                    <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Created at</p>
-                    <p class="mt-2 text-sm font-medium text-slate-100">{{ formatDateTime(manifest.createdAt) }}</p>
+                    <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Status</p>
+                    <p class="mt-2 text-sm font-medium text-slate-100">{{ manifest.deleted ? 'Removed' : 'Available' }}</p>
                   </div>
                 </div>
 
@@ -242,14 +243,14 @@ import { LoadingStateComponent } from '../../../shared/components/loading-state/
                     class="rounded-2xl bg-cyan-400 px-4 py-3 font-semibold text-slate-950 transition hover:bg-cyan-300"
                     (click)="downloadManifest(manifest)"
                   >
-                    Download latest content
+                    Download file
                   </button>
                   <button
                     type="button"
                     class="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-semibold text-slate-100 transition hover:border-cyan-400/30 hover:bg-cyan-400/10"
                     (click)="openDetails(manifest.logicalPath)"
                   >
-                    View version history
+                    View saved versions
                   </button>
                 </div>
               </div>
@@ -258,7 +259,7 @@ import { LoadingStateComponent } from '../../../shared/components/loading-state/
                 <app-empty-state
                   icon="i"
                   title="Select a file"
-                  description="Choose a file from the listing to inspect its latest manifest and actions."
+                  description="Choose a file from the list to see its details and download it."
                 ></app-empty-state>
               </div>
             }
@@ -266,16 +267,16 @@ import { LoadingStateComponent } from '../../../shared/components/loading-state/
 
           @if (uploadResult(); as manifest) {
             <section class="rounded-[2rem] border border-emerald-400/25 bg-emerald-500/10 p-5 shadow-2xl shadow-emerald-950/20 sm:p-6">
-              <p class="text-sm font-semibold text-emerald-100">Latest upload committed</p>
-              <p class="mt-2 text-lg font-semibold text-white">{{ manifest.logicalPath }}</p>
+              <p class="text-sm font-semibold text-emerald-100">Upload complete</p>
+              <p class="mt-2 text-lg font-semibold text-white">{{ getFileName(manifest.logicalPath) }}</p>
               <div class="mt-4 grid gap-3 sm:grid-cols-2">
                 <div class="rounded-2xl border border-emerald-300/20 bg-slate-950/40 p-4">
-                  <p class="text-xs uppercase tracking-[0.24em] text-emerald-200/70">Version</p>
-                  <p class="mt-2 text-sm font-medium text-white">{{ manifest.versionId }}</p>
+                  <p class="text-xs uppercase tracking-[0.24em] text-emerald-200/70">Folder</p>
+                  <p class="mt-2 break-all text-sm font-medium text-white">{{ getFolderPath(manifest.logicalPath) }}</p>
                 </div>
                 <div class="rounded-2xl border border-emerald-300/20 bg-slate-950/40 p-4">
-                  <p class="text-xs uppercase tracking-[0.24em] text-emerald-200/70">Checksum</p>
-                  <p class="mt-2 break-all text-sm font-medium text-white">{{ manifest.checksum }}</p>
+                  <p class="text-xs uppercase tracking-[0.24em] text-emerald-200/70">Saved on</p>
+                  <p class="mt-2 text-sm font-medium text-white">{{ formatDateTime(manifest.createdAt) }}</p>
                 </div>
               </div>
             </section>
@@ -295,15 +296,13 @@ export class FilesDashboardPageComponent {
     nonNullable: true,
     validators: [Validators.required, Validators.pattern(/^\/.*$/)]
   });
-  protected readonly idempotencyKeyControl = new FormControl(createIdempotencyKey(), {
-    nonNullable: true
-  });
 
   protected readonly files = signal<FileListingResponse[]>([]);
   protected readonly selectedFile = signal<FileListingResponse | null>(null);
   protected readonly selectedManifest = signal<FileManifestResponse | null>(null);
   protected readonly selectedUploadFile = signal<File | null>(null);
   protected readonly uploadResult = signal<FileManifestResponse | null>(null);
+  protected readonly uploadRequestKey = signal(createIdempotencyKey());
   protected readonly isLoadingFiles = signal(true);
   protected readonly isLoadingManifest = signal(false);
   protected readonly isUploading = signal(false);
@@ -311,6 +310,8 @@ export class FilesDashboardPageComponent {
   protected readonly uploadError = signal('');
   protected readonly formatBytes = formatBytes;
   protected readonly formatDateTime = formatDateTime;
+  protected readonly getFileName = extractFileName;
+  protected readonly getFolderPath = extractParentFolder;
 
   constructor() {
     void this.refreshFiles();
@@ -335,7 +336,7 @@ export class FilesDashboardPageComponent {
       const matchedFile = files.find((file) => file.logicalPath === currentSelection) ?? files[0];
       await this.selectFile(matchedFile);
     } catch (error) {
-      const message = getErrorMessage(error, 'The file listing request failed.');
+      const message = getErrorMessage(error, 'The file list could not be loaded.');
       this.listError.set(message);
       this.toast.error('Unable to load files', message);
     } finally {
@@ -351,9 +352,9 @@ export class FilesDashboardPageComponent {
       const manifest = await firstValueFrom(this.filesService.getManifest(file.logicalPath));
       this.selectedManifest.set(manifest);
     } catch (error) {
-      const message = getErrorMessage(error, 'The manifest request failed.');
+      const message = getErrorMessage(error, 'The file details could not be loaded.');
       this.selectedManifest.set(null);
-      this.toast.error('Unable to load manifest', message);
+      this.toast.error('Unable to load file details', message);
     } finally {
       this.isLoadingManifest.set(false);
     }
@@ -367,17 +368,13 @@ export class FilesDashboardPageComponent {
     }
   }
 
-  protected regenerateIdempotencyKey(): void {
-    this.idempotencyKeyControl.setValue(createIdempotencyKey());
-  }
-
   protected async submitUpload(): Promise<void> {
     this.logicalPathControl.markAsTouched();
     this.uploadError.set('');
 
     if (this.logicalPathControl.invalid || !this.selectedUploadFile()) {
       if (!this.selectedUploadFile()) {
-        this.uploadError.set('Choose a file to upload first.');
+        this.uploadError.set('Choose a file before uploading.');
       }
       return;
     }
@@ -391,22 +388,34 @@ export class FilesDashboardPageComponent {
           this.filesService.uploadFile({
             logicalPath: this.logicalPathControl.getRawValue().trim(),
             payloadBase64: await fileToBase64(file),
-            idempotencyKey: this.idempotencyKeyControl.getRawValue().trim() || undefined
+            idempotencyKey: this.uploadRequestKey()
           })
         )
       ).manifest;
 
       this.uploadResult.set(manifest);
       this.selectedUploadFile.set(null);
-      this.regenerateIdempotencyKey();
-      this.toast.success('Upload complete', `${manifest.logicalPath} committed as version ${manifest.versionId}.`);
+      this.uploadRequestKey.set(createIdempotencyKey());
+      this.toast.success('Upload complete', `${extractFileName(manifest.logicalPath)} has been saved.`);
       await this.refreshFiles();
     } catch (error) {
-      const message = getErrorMessage(error, 'The file upload request failed.');
+      const message = getErrorMessage(error, 'The file could not be uploaded.');
       this.uploadError.set(message);
       this.toast.error('Upload failed', message);
     } finally {
       this.isUploading.set(false);
+    }
+  }
+
+  protected async downloadFile(file: FileListingResponse): Promise<void> {
+    try {
+      const response = await firstValueFrom(this.filesService.downloadFile(file.logicalPath));
+      const blob = base64ToBlob(response.payloadBase64);
+      triggerBrowserDownload(extractFileName(file.logicalPath), blob);
+      this.toast.success('Download ready', `${extractFileName(file.logicalPath)} is ready.`);
+    } catch (error) {
+      const message = getErrorMessage(error, 'The file could not be downloaded.');
+      this.toast.error('Download failed', message);
     }
   }
 
@@ -417,9 +426,9 @@ export class FilesDashboardPageComponent {
       );
       const blob = base64ToBlob(response.payloadBase64);
       triggerBrowserDownload(extractFileName(manifest.logicalPath), blob);
-      this.toast.success('Download ready', `Fetched ${manifest.logicalPath}.`);
+      this.toast.success('Download ready', `${extractFileName(manifest.logicalPath)} is ready.`);
     } catch (error) {
-      const message = getErrorMessage(error, 'The download request failed.');
+      const message = getErrorMessage(error, 'The file could not be downloaded.');
       this.toast.error('Download failed', message);
     }
   }

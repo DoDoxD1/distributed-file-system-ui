@@ -5,12 +5,11 @@ import { firstValueFrom } from 'rxjs';
 
 import {
   DirectUploadSessionResponse,
-  DirectUploadSessionStatus,
   FileManifestResponse
 } from '../../../core/models/api.models';
 import { FilesService } from '../../../core/services/files.service';
 import { ToastService } from '../../../core/services/toast.service';
-import { computeSha256Hex } from '../../../core/utils/file.util';
+import { computeSha256Hex, extractFileName, extractParentFolder } from '../../../core/utils/file.util';
 import { formatBytes, formatDateTime, formatRelativeTime } from '../../../core/utils/format.util';
 import { getErrorMessage } from '../../../core/utils/http-error.util';
 import { createIdempotencyKey } from '../../../core/utils/idempotency.util';
@@ -25,44 +24,35 @@ import { InlineAlertComponent } from '../../../shared/components/inline-alert/in
   template: `
     <section class="space-y-6">
       <div class="rounded-[2rem] border border-white/10 bg-gradient-to-br from-cyan-400/15 via-slate-900 to-slate-950 p-6 shadow-2xl shadow-cyan-950/20 sm:p-8">
-        <p class="text-sm uppercase tracking-[0.34em] text-cyan-300/80">Direct Upload</p>
-        <h2 class="mt-3 text-3xl font-semibold tracking-tight text-white">Two-phase object storage upload flow</h2>
+        <p class="text-sm uppercase tracking-[0.34em] text-cyan-300/80">Large file upload</p>
+        <h2 class="mt-3 text-3xl font-semibold tracking-tight text-white">Upload big files with a faster transfer flow</h2>
         <p class="mt-3 max-w-3xl text-sm text-slate-300 sm:text-base">
-          Create a direct upload session, send raw bytes to the object storage URL exactly as the backend specifies, then finalize the committed version through the API.
+          This option sends the file in a more reliable way for larger uploads, then saves it to your account when the transfer finishes.
         </p>
       </div>
 
       <div class="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
         <section class="rounded-[2rem] border border-white/10 bg-slate-900/80 p-5 shadow-2xl shadow-slate-950/30 backdrop-blur-xl sm:p-6">
-          <div class="flex items-center justify-between gap-4">
-            <div>
-              <p class="text-sm font-semibold text-white">Start a new session</p>
-              <p class="text-sm text-slate-400">This flow computes SHA-256 in the browser before requesting the upload session.</p>
-            </div>
-            <button
-              type="button"
-              class="rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-slate-200 transition hover:border-cyan-400/30 hover:bg-cyan-400/10"
-              (click)="regenerateIdempotencyKey()"
-            >
-              New key
-            </button>
+          <div>
+            <p class="text-sm font-semibold text-white">Start an upload</p>
+            <p class="text-sm text-slate-400">Choose a file and tell us where you want it saved.</p>
           </div>
 
           <form class="mt-6 space-y-5" (ngSubmit)="startSession()">
             @if (formError()) {
-              <app-inline-alert title="Direct upload blocked" [message]="formError()" tone="error"></app-inline-alert>
+              <app-inline-alert title="Upload unavailable" [message]="formError()" tone="error"></app-inline-alert>
             }
 
             <app-dropzone
-              label="Drop a file for direct upload"
-              hint="Raw bytes will be uploaded to the storage URL returned by the API."
+              label="Drop a file here"
+              hint="You can also click to choose a file from your device."
               [fileName]="selectedFile()?.name || ''"
               [disabled]="isWorking()"
               (fileSelected)="handleFileSelected($event)"
             ></app-dropzone>
 
             <div>
-              <label class="mb-2 block text-sm font-medium text-slate-200" for="direct-logical-path">Logical path</label>
+              <label class="mb-2 block text-sm font-medium text-slate-200" for="direct-logical-path">Save location</label>
               <input
                 id="direct-logical-path"
                 type="text"
@@ -71,20 +61,8 @@ import { InlineAlertComponent } from '../../../shared/components/inline-alert/in
                 placeholder="/docs/report.pdf"
               >
               @if (logicalPathControl.invalid && logicalPathControl.touched) {
-                <p class="mt-2 text-sm text-rose-300">Logical paths must start with a forward slash.</p>
+                <p class="mt-2 text-sm text-rose-300">Please enter a location that starts with /.</p>
               }
-            </div>
-
-            <div>
-              <label class="mb-2 block text-sm font-medium text-slate-200" for="direct-idempotency-key">Idempotency key</label>
-              <input
-                id="direct-idempotency-key"
-                type="text"
-                [formControl]="idempotencyKeyControl"
-                class="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-cyan-400/60"
-                placeholder="Optional idempotency key"
-              >
-              <p class="mt-2 text-xs text-slate-500">Keep this key stable if you need to create a safe duplicate request after an uncertain failure.</p>
             </div>
 
             <div class="grid gap-4 rounded-3xl border border-white/10 bg-white/5 p-5 sm:grid-cols-2">
@@ -93,12 +71,10 @@ import { InlineAlertComponent } from '../../../shared/components/inline-alert/in
                 <p class="mt-2 text-sm font-medium text-slate-100">{{ selectedFile() ? formatBytes(selectedFile()!.size) : '—' }}</p>
               </div>
               <div>
-                <p class="text-xs uppercase tracking-[0.24em] text-slate-500">SHA-256</p>
-                @if (isHashing()) {
-                  <p class="mt-2 text-sm font-medium text-cyan-200">Computing checksum…</p>
-                } @else {
-                  <p class="mt-2 break-all text-sm font-medium text-slate-100">{{ checksum() || 'Select a file to compute the checksum.' }}</p>
-                }
+                <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Status</p>
+                <p class="mt-2 text-sm font-medium text-slate-100">
+                  {{ isHashing() ? 'Preparing your file…' : selectedFile() ? 'Ready to upload' : 'Choose a file to begin' }}
+                </p>
               </div>
             </div>
 
@@ -107,7 +83,7 @@ import { InlineAlertComponent } from '../../../shared/components/inline-alert/in
               class="inline-flex w-full items-center justify-center rounded-2xl bg-cyan-400 px-4 py-3 font-semibold text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
               [disabled]="isWorking() || isHashing()"
             >
-              {{ isWorking() ? 'Processing…' : 'Create session and upload' }}
+              {{ isWorking() ? 'Uploading…' : 'Start upload' }}
             </button>
           </form>
         </section>
@@ -116,8 +92,8 @@ import { InlineAlertComponent } from '../../../shared/components/inline-alert/in
           <section class="rounded-[2rem] border border-white/10 bg-slate-900/80 p-5 shadow-2xl shadow-slate-950/30 backdrop-blur-xl sm:p-6">
             <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <p class="text-sm font-semibold text-white">Current session</p>
-                <p class="text-sm text-slate-400">Resume or finalize the current session without creating a new one.</p>
+                <p class="text-sm font-semibold text-white">Upload progress</p>
+                <p class="text-sm text-slate-400">If the transfer stops, you can continue it from here.</p>
               </div>
               @if (currentSession()) {
                 <button
@@ -126,7 +102,7 @@ import { InlineAlertComponent } from '../../../shared/components/inline-alert/in
                   [disabled]="isWorking()"
                   (click)="resumeCurrentSession()"
                 >
-                  Resume current session
+                  Continue upload
                 </button>
               }
             </div>
@@ -145,34 +121,40 @@ import { InlineAlertComponent } from '../../../shared/components/inline-alert/in
                     [class.bg-emerald-400/10]="session.status === 'COMPLETED'"
                     [class.text-emerald-200]="session.status === 'COMPLETED'"
                   >
-                    {{ session.status }}
+                    {{ getStatusLabel(session) }}
                   </span>
-                  <span class="text-sm text-slate-400">Session {{ session.sessionId }}</span>
+                  <span class="text-sm text-slate-400">{{ getFileName(session.logicalPath) }}</span>
                 </div>
 
                 <div class="grid gap-4 sm:grid-cols-2">
                   <div class="rounded-3xl border border-white/10 bg-white/5 p-5">
-                    <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Logical path</p>
-                    <p class="mt-2 break-all text-sm font-medium text-slate-100">{{ session.logicalPath }}</p>
+                    <p class="text-xs uppercase tracking-[0.24em] text-slate-500">File name</p>
+                    <p class="mt-2 break-all text-sm font-medium text-slate-100">{{ getFileName(session.logicalPath) }}</p>
                   </div>
                   <div class="rounded-3xl border border-white/10 bg-white/5 p-5">
-                    <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Binary upload required</p>
-                    <p class="mt-2 text-sm font-medium text-slate-100">{{ session.uploadRequired ? 'Yes' : 'No, deduplicated object can be finalized now.' }}</p>
+                    <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Folder</p>
+                    <p class="mt-2 break-all text-sm font-medium text-slate-100">{{ getFolderPath(session.logicalPath) }}</p>
                   </div>
                   <div class="rounded-3xl border border-white/10 bg-white/5 p-5">
-                    <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Created</p>
+                    <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Size</p>
+                    <p class="mt-2 text-sm font-medium text-slate-100">{{ formatBytes(session.sizeBytes) }}</p>
+                  </div>
+                  <div class="rounded-3xl border border-white/10 bg-white/5 p-5">
+                    <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Started</p>
                     <p class="mt-2 text-sm font-medium text-slate-100">{{ formatDateTime(session.createdAt) }}</p>
                   </div>
-                  <div class="rounded-3xl border border-white/10 bg-white/5 p-5">
-                    <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Expires</p>
-                    <p class="mt-2 text-sm font-medium text-slate-100">{{ formatDateTime(session.expiresAt) }} · {{ formatRelativeTime(session.expiresAt) }}</p>
-                  </div>
+                </div>
+
+                <div class="rounded-3xl border border-white/10 bg-white/5 p-5">
+                  <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Next step</p>
+                  <p class="mt-2 text-sm font-medium text-slate-100">{{ getNextStepLabel(session) }}</p>
+                  <p class="mt-2 text-xs text-slate-500">This upload window stays available until {{ formatDateTime(session.expiresAt) }} · {{ formatRelativeTime(session.expiresAt) }}</p>
                 </div>
 
                 @if (uploadProgress() > 0 && session.uploadRequired) {
                   <div>
                     <div class="mb-2 flex items-center justify-between text-sm text-slate-300">
-                      <span>Binary upload progress</span>
+                      <span>Upload progress</span>
                       <span>{{ uploadProgress() }}%</span>
                     </div>
                     <div class="h-3 overflow-hidden rounded-full bg-slate-800">
@@ -180,21 +162,13 @@ import { InlineAlertComponent } from '../../../shared/components/inline-alert/in
                     </div>
                   </div>
                 }
-
-                @if (session.uploadRequired) {
-                  <div class="rounded-3xl border border-dashed border-slate-700 bg-slate-950/40 p-5">
-                    <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Upload target</p>
-                    <p class="mt-2 break-all text-sm text-slate-300">{{ session.uploadUrl || 'Upload URL unavailable' }}</p>
-                    <p class="mt-3 text-xs text-slate-500">Method: {{ session.uploadMethod }} · Headers are sent exactly as returned by the backend.</p>
-                  </div>
-                }
               </div>
             } @else {
               <div class="mt-6">
                 <app-empty-state
                   icon="⇅"
-                  title="No direct upload session yet"
-                  description="Create a session to stage the binary upload and then finalize it into a committed file version."
+                  title="No upload in progress"
+                  description="Start a file upload to see its progress here."
                 ></app-empty-state>
               </div>
             }
@@ -202,16 +176,16 @@ import { InlineAlertComponent } from '../../../shared/components/inline-alert/in
 
           @if (committedManifest(); as manifest) {
             <section class="rounded-[2rem] border border-emerald-400/25 bg-emerald-500/10 p-5 shadow-2xl shadow-emerald-950/20 sm:p-6">
-              <p class="text-sm font-semibold text-emerald-100">Direct upload finalized</p>
-              <p class="mt-2 text-lg font-semibold text-white">{{ manifest.logicalPath }}</p>
+              <p class="text-sm font-semibold text-emerald-100">Upload complete</p>
+              <p class="mt-2 text-lg font-semibold text-white">{{ getFileName(manifest.logicalPath) }}</p>
               <div class="mt-4 grid gap-3 sm:grid-cols-2">
                 <div class="rounded-2xl border border-emerald-300/20 bg-slate-950/40 p-4">
-                  <p class="text-xs uppercase tracking-[0.24em] text-emerald-200/70">Version</p>
-                  <p class="mt-2 text-sm font-medium text-white">{{ manifest.versionId }}</p>
+                  <p class="text-xs uppercase tracking-[0.24em] text-emerald-200/70">Folder</p>
+                  <p class="mt-2 break-all text-sm font-medium text-white">{{ getFolderPath(manifest.logicalPath) }}</p>
                 </div>
                 <div class="rounded-2xl border border-emerald-300/20 bg-slate-950/40 p-4">
-                  <p class="text-xs uppercase tracking-[0.24em] text-emerald-200/70">Checksum</p>
-                  <p class="mt-2 break-all text-sm font-medium text-white">{{ manifest.checksum }}</p>
+                  <p class="text-xs uppercase tracking-[0.24em] text-emerald-200/70">Saved on</p>
+                  <p class="mt-2 text-sm font-medium text-white">{{ formatDateTime(manifest.createdAt) }}</p>
                 </div>
               </div>
             </section>
@@ -229,14 +203,12 @@ export class DirectUploadPageComponent {
     nonNullable: true,
     validators: [Validators.required, Validators.pattern(/^\/.*$/)]
   });
-  protected readonly idempotencyKeyControl = new FormControl(createIdempotencyKey(), {
-    nonNullable: true
-  });
 
   protected readonly selectedFile = signal<File | null>(null);
   protected readonly checksum = signal('');
   protected readonly currentSession = signal<DirectUploadSessionResponse | null>(null);
   protected readonly committedManifest = signal<FileManifestResponse | null>(null);
+  protected readonly directUploadKey = signal(createIdempotencyKey());
   protected readonly formError = signal('');
   protected readonly isHashing = signal(false);
   protected readonly isWorking = signal(false);
@@ -244,10 +216,8 @@ export class DirectUploadPageComponent {
   protected readonly formatBytes = formatBytes;
   protected readonly formatDateTime = formatDateTime;
   protected readonly formatRelativeTime = formatRelativeTime;
-
-  protected regenerateIdempotencyKey(): void {
-    this.idempotencyKeyControl.setValue(createIdempotencyKey());
-  }
+  protected readonly getFileName = extractFileName;
+  protected readonly getFolderPath = extractParentFolder;
 
   protected async handleFileSelected(file: File): Promise<void> {
     this.selectedFile.set(file);
@@ -268,7 +238,7 @@ export class DirectUploadPageComponent {
 
     if (this.logicalPathControl.invalid || !this.selectedFile()) {
       if (!this.selectedFile()) {
-        this.formError.set('Choose a file before starting a direct upload session.');
+        this.formError.set('Choose a file before starting the upload.');
       }
       return;
     }
@@ -284,17 +254,17 @@ export class DirectUploadPageComponent {
           checksumSha256: checksum,
           sizeBytes: file.size,
           contentType: file.type || 'application/octet-stream',
-          idempotencyKey: this.idempotencyKeyControl.getRawValue().trim() || undefined
+          idempotencyKey: this.directUploadKey()
         })
       );
 
       this.currentSession.set(session);
-      this.toast.info('Session created', `Upload session ${session.sessionId} is ready.`);
+      this.toast.info('Upload started', `${extractFileName(session.logicalPath)} is ready to upload.`);
       await this.continueSession(session, file);
     } catch (error) {
-      const message = getErrorMessage(error, 'Unable to create the direct upload session.');
+      const message = getErrorMessage(error, 'We could not start the upload.');
       this.formError.set(message);
-      this.toast.error('Direct upload failed', message);
+      this.toast.error('Upload failed', message);
     } finally {
       this.isWorking.set(false);
     }
@@ -315,22 +285,45 @@ export class DirectUploadPageComponent {
       this.currentSession.set(session);
 
       if (session.status === 'COMPLETED') {
-        this.toast.info('Session already completed', 'This session has already been finalized.');
+        this.toast.info('Already finished', 'This upload has already been completed.');
         return;
       }
 
       if (session.uploadRequired && !this.selectedFile()) {
-        throw new Error('Select the original file to resume the staged binary upload.');
+        throw new Error('Choose the original file again to continue this upload.');
       }
 
       await this.continueSession(session, this.selectedFile() ?? undefined);
     } catch (error) {
-      const message = getErrorMessage(error, 'Unable to resume the direct upload session.');
+      const message = getErrorMessage(error, 'We could not continue the upload.');
       this.formError.set(message);
-      this.toast.error('Resume failed', message);
+      this.toast.error('Continue failed', message);
     } finally {
       this.isWorking.set(false);
     }
+  }
+
+  protected getStatusLabel(session: DirectUploadSessionResponse): string {
+    switch (session.status) {
+      case 'AWAITING_UPLOAD':
+        return 'Uploading';
+      case 'READY_TO_COMMIT':
+        return 'Finishing up';
+      case 'COMPLETED':
+        return 'Done';
+    }
+  }
+
+  protected getNextStepLabel(session: DirectUploadSessionResponse): string {
+    if (session.status === 'COMPLETED') {
+      return 'Your file has already been saved.';
+    }
+
+    if (session.uploadRequired && session.status === 'AWAITING_UPLOAD') {
+      return 'We still need to transfer the file.';
+    }
+
+    return 'The file is ready to be saved to your account.';
   }
 
   private async continueSession(
@@ -343,13 +336,13 @@ export class DirectUploadPageComponent {
 
     if (session.uploadRequired && session.status === 'AWAITING_UPLOAD') {
       if (!file) {
-        throw new Error('The original file is required to finish the binary upload step.');
+        throw new Error('The original file is required to continue this upload.');
       }
 
       this.uploadProgress.set(0);
       await firstValueFrom(this.filesService.uploadToObjectStorage(session, file));
       this.uploadProgress.set(100);
-      this.toast.success('Binary upload complete', 'Raw bytes were transferred to object storage.');
+      this.toast.success('Upload finished', 'Your file transfer completed successfully.');
     }
 
     await this.finalizeSession(session.sessionId);
@@ -361,11 +354,8 @@ export class DirectUploadPageComponent {
 
     this.currentSession.set(refreshedSession);
     this.committedManifest.set(result.manifest);
-    this.regenerateIdempotencyKey();
-    this.toast.success(
-      'Session finalized',
-      `${result.manifest.logicalPath} committed as version ${result.manifest.versionId}.`
-    );
+    this.directUploadKey.set(createIdempotencyKey());
+    this.toast.success('File saved', `${extractFileName(result.manifest.logicalPath)} is now available.`);
   }
 
   private async computeChecksum(file: File): Promise<string> {
@@ -376,17 +366,11 @@ export class DirectUploadPageComponent {
       this.checksum.set(checksum);
       return checksum;
     } catch (error) {
-      const message = getErrorMessage(error, 'Unable to compute the SHA-256 checksum.');
+      const message = getErrorMessage(error, 'We could not prepare the file for upload.');
       this.formError.set(message);
       throw error;
     } finally {
       this.isHashing.set(false);
     }
   }
-
-  protected readonly statusValues: DirectUploadSessionStatus[] = [
-    'AWAITING_UPLOAD',
-    'READY_TO_COMMIT',
-    'COMPLETED'
-  ];
 }

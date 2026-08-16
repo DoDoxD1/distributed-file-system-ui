@@ -48,3 +48,14 @@ export const extractFileName = (logicalPath: string): string => {
 
   return segments.at(-1) ?? 'download';
 };
+
+export const extractParentFolder = (logicalPath: string): string => {
+  const normalizedPath = logicalPath.trim();
+  const lastSlashIndex = normalizedPath.lastIndexOf('/');
+
+  if (lastSlashIndex <= 0) {
+    return '/';
+  }
+
+  return normalizedPath.slice(0, lastSlashIndex);
+};

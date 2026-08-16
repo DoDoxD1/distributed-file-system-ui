@@ -19,19 +19,19 @@ import { InlineAlertComponent } from '../../../shared/components/inline-alert/in
         <section class="rounded-[2rem] border border-white/10 bg-gradient-to-br from-cyan-400/15 via-slate-900 to-slate-950 p-8 shadow-2xl shadow-cyan-950/20 sm:p-10">
           <p class="text-sm uppercase tracking-[0.34em] text-cyan-300/80">Distributed File Storage System</p>
           <h1 class="mt-4 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-            Secure access to your distributed file control plane.
+            Store, organize, and download your files in one place.
           </h1>
           <p class="mt-4 max-w-xl text-base text-slate-300 sm:text-lg">
-            Monitor storage health, upload files through standard or direct flows, and administer replication workers from one modern console.
+            Sign in to browse your folders, upload new files, and keep everything easy to find.
           </p>
           <div class="mt-8 grid gap-4 sm:grid-cols-2">
             <div class="rounded-3xl border border-white/10 bg-white/5 p-5">
-              <p class="text-sm font-semibold text-white">Token-aware client</p>
-              <p class="mt-2 text-sm text-slate-400">Bearer attachment, refresh-cookie recovery, and guarded navigation are built in.</p>
+              <p class="text-sm font-semibold text-white">Easy sign-in</p>
+              <p class="mt-2 text-sm text-slate-400">Your session stays active in the background so you can keep working without extra steps.</p>
             </div>
             <div class="rounded-3xl border border-white/10 bg-white/5 p-5">
-              <p class="text-sm font-semibold text-white">Direct upload ready</p>
-              <p class="mt-2 text-sm text-slate-400">Support staged object storage uploads with resumable session UX and progress tracking.</p>
+              <p class="text-sm font-semibold text-white">Made for larger files</p>
+              <p class="mt-2 text-sm text-slate-400">Use the faster upload option when you need a smoother experience for bigger files.</p>
             </div>
           </div>
         </section>

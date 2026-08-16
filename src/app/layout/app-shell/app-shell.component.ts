@@ -26,7 +26,7 @@ interface NavigationItem {
             </div>
             <div>
               <p class="text-xs uppercase tracking-[0.3em] text-cyan-300/80">Distributed File Storage System</p>
-              <h1 class="text-lg font-semibold text-white sm:text-xl">Operations Console</h1>
+              <h1 class="text-lg font-semibold text-white sm:text-xl">Your storage</h1>
             </div>
           </div>
 
@@ -41,7 +41,7 @@ interface NavigationItem {
                     </span>
                   }
                 </div>
-                <p class="text-xs text-slate-400">Client-side session active</p>
+                <p class="text-xs text-slate-400">Signed in</p>
               </div>
             }
             <button
@@ -101,14 +101,6 @@ interface NavigationItem {
                 </a>
               }
             </nav>
-
-            <div class="rounded-3xl border border-cyan-400/20 bg-cyan-400/10 p-4">
-              <p class="text-xs uppercase tracking-[0.24em] text-cyan-200/80">Session state</p>
-              <p class="mt-2 text-base font-semibold text-white">Authenticated</p>
-              <p class="mt-1 text-sm text-cyan-100/75">
-                Use the direct upload flow for larger files and storage-optimized writes.
-              </p>
-            </div>
           </div>
         </aside>
 
@@ -141,9 +133,9 @@ export class AppShellComponent {
 
   private readonly navigationItems: NavigationItem[] = [
     { label: 'Files', shortLabel: 'Files', route: '/files' },
-    { label: 'Direct Upload', shortLabel: 'Upload', route: '/direct-upload' },
-    { label: 'System', shortLabel: 'System', route: '/system' },
-    { label: 'Workers', shortLabel: 'Workers', route: '/workers', adminOnly: true }
+    { label: 'Upload', shortLabel: 'Upload', route: '/direct-upload' },
+    { label: 'System status', shortLabel: 'Status', route: '/system' },
+    { label: 'Admin tools', shortLabel: 'Admin', route: '/workers', adminOnly: true }
   ];
 
   protected readonly navItems = computed(() =>
