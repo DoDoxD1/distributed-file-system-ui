@@ -93,6 +93,7 @@ export class FilesDashboardPageComponent {
   protected readonly isLoadingFiles = signal(true);
   protected readonly isLoadingManifest = signal(false);
   protected readonly isUploading = signal(false);
+  protected readonly uploadModalOpen = signal(false);
   protected readonly listError = signal('');
   protected readonly uploadError = signal('');
   protected readonly formatBytes = formatBytes;
@@ -183,6 +184,7 @@ export class FilesDashboardPageComponent {
       this.uploadResult.set(manifest);
       this.selectedUploadFile.set(null);
       this.uploadRequestKey.set(createIdempotencyKey());
+      this.uploadModalOpen.set(false);
       this.toast.success('Upload complete', `${extractFileName(manifest.logicalPath)} has been saved.`);
       await this.refreshFiles();
     } catch (error) {
@@ -234,6 +236,20 @@ export class FilesDashboardPageComponent {
 
   protected isFolderExpanded(path: string): boolean {
     return this.expandedFolders().has(path);
+  }
+
+  protected openUploadModal(): void {
+    this.uploadForm.reset();
+    this.selectedUploadFile.set(null);
+    this.uploadError.set('');
+    this.uploadModalOpen.set(true);
+  }
+
+  protected closeUploadModal(): void {
+    if (this.isUploading()) {
+      return;
+    }
+    this.uploadModalOpen.set(false);
   }
 
   protected openDetails(logicalPath: string): void {

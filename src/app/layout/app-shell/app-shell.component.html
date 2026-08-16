@@ -67,40 +67,47 @@
     </div>
   </header>
 
-  <div class="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[18rem_minmax(0,1fr)] lg:px-8 lg:py-8">
-    <aside class="hidden lg:block">
-      <div class="sticky top-28 space-y-6 rounded-[2rem] border border-white/10 bg-white/5 p-4 shadow-2xl shadow-slate-950/40 backdrop-blur-xl">
-        <nav class="space-y-2">
-          @for (item of navItems(); track item.route) {
-            <a
-              [routerLink]="item.route"
-              routerLinkActive="bg-cyan-400/15 text-white shadow-inner shadow-cyan-400/10"
-              class="flex items-center justify-between rounded-2xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white"
-            >
-              <span>{{ item.label }}</span>
-              <span class="text-slate-500">›</span>
-            </a>
-          }
-        </nav>
-      </div>
-    </aside>
-
-    <main class="min-w-0 space-y-6">
-      <div class="overflow-x-auto lg:hidden">
-        <div class="flex min-w-max gap-2 rounded-3xl border border-white/10 bg-white/5 p-2 backdrop-blur-xl">
-          @for (item of navItems(); track item.route) {
-            <a
-              [routerLink]="item.route"
-              routerLinkActive="bg-cyan-400/15 text-white"
-              class="rounded-2xl px-4 py-2 text-sm font-medium text-slate-300"
-            >
-              {{ item.shortLabel }}
-            </a>
-          }
+  @if (auth.isAdmin()) {
+    <div class="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[18rem_minmax(0,1fr)] lg:px-8 lg:py-8">
+      <aside class="hidden lg:block">
+        <div class="sticky top-28 space-y-6 rounded-[2rem] border border-white/10 bg-white/5 p-4 shadow-2xl shadow-slate-950/40 backdrop-blur-xl">
+          <nav class="space-y-2">
+            @for (item of navItems(); track item.route) {
+              <a
+                [routerLink]="item.route"
+                routerLinkActive="bg-cyan-400/15 text-white shadow-inner shadow-cyan-400/10"
+                class="flex items-center justify-between rounded-2xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white"
+              >
+                <span>{{ item.label }}</span>
+                <span class="text-slate-500">›</span>
+              </a>
+            }
+          </nav>
         </div>
-      </div>
+      </aside>
+      <main class="min-w-0 space-y-6">
+        <div class="overflow-x-auto lg:hidden">
+          <div class="flex min-w-max gap-2 rounded-3xl border border-white/10 bg-white/5 p-2 backdrop-blur-xl">
+            @for (item of navItems(); track item.route) {
+              <a
+                [routerLink]="item.route"
+                routerLinkActive="bg-cyan-400/15 text-white"
+                class="rounded-2xl px-4 py-2 text-sm font-medium text-slate-300"
+              >
+                {{ item.shortLabel }}
+              </a>
+            }
+          </div>
+        </div>
 
-      <router-outlet></router-outlet>
-    </main>
-  </div>
+        <router-outlet></router-outlet>
+      </main>
+    </div>
+  } @else {
+    <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+      <main class="min-w-0 space-y-6">
+        <router-outlet></router-outlet>
+      </main>
+    </div>
+  }
 </div>
