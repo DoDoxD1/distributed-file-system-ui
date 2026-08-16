@@ -80,31 +80,60 @@ export class FilesDashboardPageComponent {
     if (!q) return this.files();
     return this.files().filter((f) => f.logicalPath.toLowerCase().includes(q));
   });
-  protected readonly expandedFolders = signal<ReadonlySet<string>>(new Set<string>());
+  protected readonly openFolder = signal<string | null>(null);
+
+  protected readonly breadcrumbs = computed<{ label: string; path: string | null }[]>(() => {
+    const folder = this.openFolder();
+    if (!folder) return [];
+    const parts = folder.split('/').filter(Boolean);
+    const crumbs: { label: string; path: string | null }[] = [{ label: 'All files', path: null }];
+    let accumulated = '';
+    for (const part of parts) {
+      accumulated += '/' + part;
+      crumbs.push({ label: part, path: accumulated });
+    }
+    return crumbs;
+  });
 
   protected readonly treeEntries = computed(() => {
-    const expanded = this.expandedFolders();
+    const q = this.searchQuery().trim();
     const root = buildFolderTree(this.filteredFiles());
+
+    if (q) {
+      return this.filteredFiles().map((file): TreeEntry => ({ kind: 'file', file, depth: 0 }));
+    }
+
+    const folder = this.openFolder();
     const entries: TreeEntry[] = [];
 
-    const walk = (node: FolderNodeType, depth: number): void => {
+    if (!folder) {
+      for (const child of root.children) {
+        entries.push({ kind: 'folder', node: child, depth: 0 });
+      }
+      for (const file of root.files) {
+        entries.push({ kind: 'file', file, depth: 0 });
+      }
+      return entries;
+    }
+
+    const findNode = (node: FolderNodeType, targetPath: string): FolderNodeType | null => {
+      if (node.path === targetPath) return node;
       for (const child of node.children) {
-        entries.push({ kind: 'folder', node: child, depth });
-        if (expanded.has(child.path)) {
-          walk(child, depth + 1);
-          for (const file of child.files) {
-            entries.push({ kind: 'file', file, depth: depth + 1 });
-          }
-        }
+        const found = findNode(child, targetPath);
+        if (found) return found;
       }
-      if (node === root) {
-        for (const file of node.files) {
-          entries.push({ kind: 'file', file, depth });
-        }
-      }
+      return null;
     };
 
-    walk(root, 0);
+    const target = findNode(root, folder);
+    if (!target) return entries;
+
+    for (const child of target.children) {
+      entries.push({ kind: 'folder', node: child, depth: 0 });
+    }
+    for (const file of target.files) {
+      entries.push({ kind: 'file', file, depth: 0 });
+    }
     return entries;
   });
   protected readonly selectedFile = signal<FileListingResponse | null>(null);
@@ -332,20 +361,21 @@ export class FilesDashboardPageComponent {
     }
   }
 
-  protected toggleFolder(path: string): void {
-    this.expandedFolders.update((current) => {
-      const next = new Set(current);
-      if (next.has(path)) {
-        next.delete(path);
-      } else {
-        next.add(path);
-      }
-      return next;
-    });
+  protected enterFolder(path: string): void {
+    this.openFolder.set(path);
+    this.selectedFile.set(null);
   }
 
-  protected isFolderExpanded(path: string): boolean {
-    return this.expandedFolders().has(path);
+  protected exitToPath(path: string | null): void {
+    this.openFolder.set(path);
+    this.selectedFile.set(null);
+  }
+
+  protected setSearch(query: string): void {
+    this.searchQuery.set(query);
+    if (!query.trim()) {
+      this.openFolder.set(null);
+    }
   }
 
   protected openUploadModal(): void {

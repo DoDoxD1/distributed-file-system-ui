@@ -17,7 +17,7 @@
           style="border-color: rgba(15,23,42,0.15); background-color: var(--bg-page); color: var(--text-primary)"
           placeholder="Filter by name or path…"
           [value]="searchQuery()"
-          (input)="searchQuery.set($any($event.target).value)"
+          (input)="setSearch($any($event.target).value)"
         >
       </div>
     </div>
@@ -32,7 +32,7 @@
             @if (searchQuery()) {
               {{ filteredFiles().length }} of {{ files().length }} item{{ files().length === 1 ? '' : 's' }}
             } @else {
-              {{ files().length }} item{{ files().length === 1 ? '' : 's' }}
+              {{ treeEntries().length }} item{{ treeEntries().length === 1 ? '' : 's' }}
             }
           </p>
         </div>
@@ -53,6 +53,23 @@
           </button>
         </div>
       </div>
+
+      @if (breadcrumbs().length) {
+        <nav class="flex items-center gap-1 overflow-x-auto">
+          @for (crumb of breadcrumbs(); track crumb.path; let last = $last) {
+            @if (!last) {
+              <button
+                type="button"
+                class="shrink-0 rounded-xl px-3 py-1.5 text-sm font-medium text-cyan-600 transition hover:bg-cyan-400/10 dark:text-cyan-300"
+                (click)="exitToPath(crumb.path)"
+              >{{ crumb.label }}</button>
+              <span class="shrink-0 text-slate-400">/</span>
+            } @else {
+              <span class="shrink-0 rounded-xl px-3 py-1.5 text-sm font-medium text-slate-900 dark:text-white">{{ crumb.label }}</span>
+            }
+          }
+        </nav>
+      }
 
       @if (listError()) {
         <app-inline-alert title="We couldn't load your files" [message]="listError()" tone="error"></app-inline-alert>
@@ -82,22 +99,21 @@
               <button
                 type="button"
                 class="btn-ghost flex w-full items-center gap-2 px-4 py-3 text-left hover:bg-cyan-400/5 dark:hover:border-cyan-400/20 dark:hover:bg-cyan-400/5"
-                [style.padding-left.rem]="1 + entry.depth * 1.25"
-                (click)="toggleFolder(entry.node.path)"
+                (click)="enterFolder(entry.node.path)"
               >
-                <span class="text-slate-400 transition-transform duration-150" [class.rotate-90]="isFolderExpanded(entry.node.path)">▶</span>
+                <span class="text-slate-400">📁</span>
                 <span class="text-sm font-medium text-slate-700 dark:text-slate-200">{{ entry.node.name }}</span>
                 <span class="ml-auto text-xs text-slate-500">
                   {{ entry.node.files.length + entry.node.children.length }} item{{ entry.node.files.length + entry.node.children.length === 1 ? '' : 's' }}
                 </span>
+                <span class="text-slate-400">›</span>
               </button>
             } @else {
               <article
                 class="rounded-2xl border px-4 py-3 transition"
-                [style.padding-left.rem]="1 + entry.depth * 1.25"
                 [class.border-cyan-400/40]="selectedFile()?.logicalPath === entry.file.logicalPath"
                 [class.bg-cyan-400/10]="selectedFile()?.logicalPath === entry.file.logicalPath"
-[class.border-black/10]="selectedFile()?.logicalPath !== entry.file.logicalPath"
+                [class.border-black/10]="selectedFile()?.logicalPath !== entry.file.logicalPath"
                 [class.bg-black/5]="selectedFile()?.logicalPath !== entry.file.logicalPath"
                 [class.dark:border-white/10]="selectedFile()?.logicalPath !== entry.file.logicalPath"
                 [class.dark:bg-white/5]="selectedFile()?.logicalPath !== entry.file.logicalPath"
@@ -105,7 +121,12 @@
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div class="min-w-0">
                     <p class="truncate text-sm font-semibold text-slate-900 dark:text-white">{{ getFileName(entry.file.logicalPath) }}</p>
-                    <p class="mt-0.5 text-xs text-slate-500">{{ formatBytes(entry.file.sizeBytes) }} · {{ formatDateTime(entry.file.createdAt) }}</p>
+                    <p class="mt-0.5 truncate text-xs text-slate-500">
+                      @if (searchQuery()) {
+                        {{ entry.file.logicalPath }} ·
+                      }
+                      {{ formatBytes(entry.file.sizeBytes) }} · {{ formatDateTime(entry.file.createdAt) }}
+                    </p>
                   </div>
                   @if (pendingDeleteFile()?.logicalPath === entry.file.logicalPath) {
                     <div class="flex shrink-0 items-center gap-2">
