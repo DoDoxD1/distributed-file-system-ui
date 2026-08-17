@@ -318,16 +318,22 @@
         ></app-dropzone>
 
         <div>
-          <label class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200" for="modal-logical-path">Save location</label>
+          <label class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200" for="modal-logical-path">Folder</label>
           <input
             id="modal-logical-path"
             type="text"
             formControlName="logicalPath"
             class="w-full rounded-2xl border border-black/15 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-cyan-500/60 dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-cyan-400/60"
-            placeholder="/docs/report.pdf"
+            placeholder="/docs/"
           >
           @if (uploadForm.controls.logicalPath.invalid && uploadForm.controls.logicalPath.touched) {
-            <p class="mt-2 text-sm text-rose-500 dark:text-rose-300">Please enter a location that starts with /.</p>
+            <p class="mt-2 text-sm text-rose-500 dark:text-rose-300">Please enter a folder path that starts with /.</p>
+          }
+          @if (selectedUploadFile()) {
+            <div class="mt-2 flex items-center gap-2 rounded-xl border border-black/10 bg-black/5 px-3 py-2 dark:border-white/10 dark:bg-white/5">
+              <i class="fa-regular fa-file text-xs text-slate-400"></i>
+              <p class="truncate font-mono text-xs text-slate-600 dark:text-slate-400">{{ resolvedUploadPath }}</p>
+            </div>
           }
           <p class="mt-2 text-xs text-slate-500">If the upload is interrupted, you can try again safely.</p>
         </div>
