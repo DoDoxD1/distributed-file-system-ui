@@ -54,6 +54,15 @@ ng e2e
 
 Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
 
+## Git hooks
+
+A `pre-commit` hook automatically bumps the patch version in `package.json` on every commit.
+The hook lives in `.githooks/` (tracked by git). After cloning, enable it with:
+
+```bash
+git config core.hooksPath .githooks
+```
+
 ## Additional Resources
 
 For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
