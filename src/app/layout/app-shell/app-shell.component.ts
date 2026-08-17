@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 
+import { environment } from '../../../environments/environment';
 import { AuthService } from '../../core/services/auth.service';
 import { FileCacheService } from '../../core/services/file-cache.service';
 import { ThemeService } from '../../core/services/theme.service';
@@ -47,6 +48,7 @@ export class AppShellComponent {
   );
 
   protected readonly sidebarCollapsed = signal(false);
+  protected readonly version = environment.version;
 
   protected toggleSidebar(): void {
     this.sidebarCollapsed.update((v) => !v);
