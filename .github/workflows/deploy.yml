@@ -3,7 +3,7 @@ name: Deploy UI
 on:
   push:
     branches:
-      - caddy
+      - main
 
 jobs:
   deploy:
@@ -17,4 +17,8 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            ~/deploy-ui.sh
+            cd ~/distributed-file-system-ui
+            git fetch origin main
+            git reset --hard origin/main
+            docker compose up -d --build --remove-orphans
+	    echo "Deployment completed successfully!"
