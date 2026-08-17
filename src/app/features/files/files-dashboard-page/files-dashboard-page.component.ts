@@ -70,7 +70,7 @@ export class FilesDashboardPageComponent {
   protected readonly uploadForm = new FormGroup({
     logicalPath: new FormControl('', {
       nonNullable: true,
-      validators: [Validators.required, Validators.pattern(/^\/.*$/)]
+      validators: [Validators.required, Validators.pattern(/^\/.*/)]
     })
   });
 
@@ -262,11 +262,20 @@ export class FilesDashboardPageComponent {
     this.previewModalOpen.set(false);
   }
 
+  protected get resolvedUploadPath(): string {
+    const file = this.selectedUploadFile();
+    if (!file) return '';
+    const folder = this.uploadForm.controls.logicalPath.getRawValue();
+    const prefix = folder.endsWith('/') ? folder : folder + '/';
+    return prefix + file.name;
+  }
+
   protected handleUploadFileSelected(file: File): void {
     this.selectedUploadFile.set(file);
 
-    if (!this.uploadForm.controls.logicalPath.getRawValue().trim()) {
-      this.uploadForm.controls.logicalPath.setValue(`/${file.name}`);
+    const current = this.uploadForm.controls.logicalPath.getRawValue();
+    if (!current.trim() || current === '/') {
+      this.uploadForm.controls.logicalPath.setValue('/');
     }
   }
 
@@ -285,10 +294,14 @@ export class FilesDashboardPageComponent {
 
     try {
       const file = this.selectedUploadFile()!;
+      const rawPath = this.uploadForm.controls.logicalPath.getRawValue().trim();
+      const normalizedPath = rawPath.endsWith('/')
+        ? rawPath + file.name
+        : rawPath;
       const manifest = (
         await firstValueFrom(
           this.filesService.uploadFile({
-            logicalPath: this.uploadForm.controls.logicalPath.getRawValue().trim(),
+            logicalPath: normalizedPath,
             payloadBase64: await fileToBase64(file),
             idempotencyKey: this.uploadRequestKey()
           })
@@ -379,7 +392,9 @@ export class FilesDashboardPageComponent {
   }
 
   protected openUploadModal(): void {
-    this.uploadForm.reset();
+    const folder = this.openFolder();
+    const prefix = folder ? folder + '/' : '/';
+    this.uploadForm.reset({ logicalPath: prefix });
     this.selectedUploadFile.set(null);
     this.uploadError.set('');
     this.uploadModalOpen.set(true);

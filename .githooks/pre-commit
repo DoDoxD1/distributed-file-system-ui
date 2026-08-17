@@ -1,0 +1,19 @@
+#!/bin/sh
+# Bump the patch version in package.json on every commit.
+# Requires: node (available in PATH)
+node - <<'EOF'
+const fs = require('fs');
+const path = require('path');
+
+const pkgPath = path.join(process.cwd(), 'package.json');
+const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+
+const parts = pkg.version.split('.').map(Number);
+parts[2] += 1;
+pkg.version = parts.join('.');
+
+fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
+process.stdout.write('Version bumped to ' + pkg.version + '\n');
+EOF
+
+git add package.json
