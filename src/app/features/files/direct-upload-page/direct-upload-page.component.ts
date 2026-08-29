@@ -92,7 +92,7 @@ export class DirectUploadPageComponent {
       this.toast.info('Upload started', `${extractFileName(session.logicalPath)} is ready to upload.`);
       await this.continueSession(session, file);
     } catch (error) {
-      const message = getErrorMessage(error, 'We could not start the upload.');
+      const message = this.getUploadErrorMessage(error);
       this.formError.set(message);
       this.toast.error('Upload failed', message);
     } finally {
@@ -125,7 +125,7 @@ export class DirectUploadPageComponent {
 
       await this.continueSession(session, this.selectedFile() ?? undefined);
     } catch (error) {
-      const message = getErrorMessage(error, 'We could not continue the upload.');
+      const message = this.getUploadErrorMessage(error);
       this.formError.set(message);
       this.toast.error('Continue failed', message);
     } finally {
@@ -216,5 +216,23 @@ export class DirectUploadPageComponent {
     } finally {
       this.isHashing.set(false);
     }
+  }
+
+  private getUploadErrorMessage(error: unknown): string {
+    const message = getErrorMessage(error, 'The upload could not be completed right now.');
+
+    if (/expired|invalid|no longer be valid/i.test(message)) {
+      return 'The upload expired before it could finish. Please try again.';
+    }
+
+    if (/cancelled|canceled/i.test(message)) {
+      return 'The upload was canceled before it finished.';
+    }
+
+    if (/network|transfer|storage upload failed/i.test(message)) {
+      return 'The file transfer was interrupted. Please try again.';
+    }
+
+    return 'The upload could not be completed right now. Please try again.';
   }
 }
