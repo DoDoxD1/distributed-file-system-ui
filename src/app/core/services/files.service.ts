@@ -1,24 +1,26 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, Subscription, firstValueFrom } from 'rxjs';
 
 import {
   CreateDirectUploadSessionRequest,
   DeleteFileResponse,
+  DirectFileUploadState,
   DirectUploadSessionResponse,
   DownloadFileResponse,
   FileListingResponse,
   FileManifestResponse,
-  UploadFileRequest,
   UploadFileResponse
 } from '../models/api.models';
 import { encodePathToBase64Url } from '../utils/encoding.util';
+import { computeSha256Hex } from '../utils/file.util';
 import { ApiService } from './api.service';
 
 @Injectable({ providedIn: 'root' })
 export class FilesService {
   private readonly http = inject(HttpClient);
   private readonly api = inject(ApiService);
+  private static readonly SESSION_RECREATE_LIMIT = 1;
 
   listFiles(prefix?: string): Observable<FileListingResponse[]> {
     let params = new HttpParams();
@@ -30,8 +32,151 @@ export class FilesService {
     return this.http.get<FileListingResponse[]>(this.api.endpoint('/files'), { params });
   }
 
-  uploadFile(payload: UploadFileRequest): Observable<UploadFileResponse> {
-    return this.http.post<UploadFileResponse>(this.api.endpoint('/files'), payload);
+  uploadFileDirect(
+    file: File,
+    logicalPath: string,
+    idempotencyKey?: string | null
+  ): Observable<DirectFileUploadState> {
+    return new Observable<DirectFileUploadState>((observer) => {
+      let cancelled = false;
+      let uploadSubscription: Subscription | null = null;
+
+      const emitState = (state: DirectFileUploadState): void => {
+        if (!cancelled) {
+          observer.next(state);
+        }
+      };
+
+      const run = async (): Promise<void> => {
+        emitState({
+          status: 'creating session',
+          requestedLogicalPath: logicalPath,
+          logicalPath,
+          progress: 0,
+          session: null,
+          manifest: null
+        });
+
+        try {
+          const checksumSha256 = await computeSha256Hex(file);
+          let recreateCount = 0;
+          let currentIdempotencyKey = idempotencyKey ?? crypto.randomUUID();
+
+          while (!cancelled) {
+            let session: DirectUploadSessionResponse | null = null;
+
+            try {
+              emitState({
+                status: 'creating session',
+                requestedLogicalPath: logicalPath,
+                logicalPath,
+                progress: 0,
+                session: null,
+                manifest: null
+              });
+
+              session = await firstValueFrom(
+                this.createDirectUploadSession({
+                  logicalPath,
+                  checksumSha256,
+                  sizeBytes: file.size,
+                  contentType: file.type || null,
+                  idempotencyKey: currentIdempotencyKey
+                })
+              );
+
+              if (this.isSessionExpired(session)) {
+                throw new Error('The upload session expired before the file transfer could start.');
+              }
+
+              if (session.uploadRequired) {
+                const uploadSession = session;
+
+                emitState({
+                  status: 'uploading to storage',
+                  requestedLogicalPath: logicalPath,
+                  logicalPath: uploadSession.logicalPath,
+                  progress: 0,
+                  session: uploadSession,
+                  manifest: null
+                });
+
+                await new Promise<void>((resolve, reject) => {
+                  uploadSubscription = this.uploadToObjectStorage(uploadSession, file).subscribe({
+                    next: (progress) => {
+                      emitState({
+                        status: 'uploading to storage',
+                        requestedLogicalPath: logicalPath,
+                        logicalPath: uploadSession.logicalPath,
+                        progress,
+                        session: uploadSession,
+                        manifest: null
+                      });
+                    },
+                    error: (error: unknown) => reject(error),
+                    complete: () => resolve()
+                  });
+                });
+              }
+
+              emitState({
+                status: 'finalizing',
+                requestedLogicalPath: logicalPath,
+                logicalPath: session.logicalPath,
+                progress: 100,
+                session,
+                manifest: null
+              });
+
+              const result = await firstValueFrom(this.finalizeDirectUploadSession(session.sessionId));
+              const completedSession: DirectUploadSessionResponse = {
+                ...session,
+                status: 'COMPLETED',
+                committedVersionId: result.manifest.versionId
+              };
+
+              emitState({
+                status: 'complete',
+                requestedLogicalPath: logicalPath,
+                logicalPath: result.manifest.logicalPath,
+                progress: 100,
+                session: completedSession,
+                manifest: result.manifest
+              });
+
+              if (!cancelled) {
+                observer.complete();
+              }
+              return;
+            } catch (error) {
+              if (
+                this.shouldRecreateSession(error, session) &&
+                recreateCount < FilesService.SESSION_RECREATE_LIMIT
+              ) {
+                recreateCount += 1;
+                currentIdempotencyKey = crypto.randomUUID();
+                continue;
+              }
+
+              throw error;
+            } finally {
+              uploadSubscription = null;
+            }
+          }
+        } catch (error) {
+          if (!cancelled) {
+            observer.error(error);
+          }
+        }
+      };
+
+      void run();
+
+      return () => {
+        cancelled = true;
+        uploadSubscription?.unsubscribe();
+      };
+    });
   }
 
   createDirectUploadSession(
@@ -52,7 +197,7 @@ export class FilesService {
   finalizeDirectUploadSession(sessionId: string): Observable<UploadFileResponse> {
     return this.http.post<UploadFileResponse>(
       this.api.endpoint(`/files/direct/upload-sessions/${sessionId}/finalize`),
-      {}
+      null
     );
   }
 
@@ -107,6 +252,11 @@ export class FilesService {
         return undefined;
       }
 
+      if (!session.uploadMethod) {
+        observer.error(new Error('Upload method is missing for this direct upload session.'));
+        return undefined;
+      }
+
       const xhr = new XMLHttpRequest();
 
       xhr.open(session.uploadMethod, session.uploadUrl, true);
@@ -127,8 +277,14 @@ export class FilesService {
           return;
         }
 
+        const maybeExpiredMessage = this.isStaleUploadTargetStatus(xhr.status)
+          ? ' The upload target may no longer be valid.'
+          : '';
+
         observer.error(
-          new Error(`Object storage upload failed with status ${xhr.status || 'unknown'}.`)
+          new Error(
+            `Object storage upload failed with status ${xhr.status || 'unknown'}.${maybeExpiredMessage}`
+          )
         );
       });
 
@@ -148,5 +304,38 @@ export class FilesService {
         }
       };
     });
+  }
+
+  private isSessionExpired(session: DirectUploadSessionResponse): boolean {
+    const expiresAt = new Date(session.expiresAt).getTime();
+
+    return Number.isNaN(expiresAt) || expiresAt <= Date.now();
+  }
+
+  private shouldRecreateSession(
+    error: unknown,
+    session: DirectUploadSessionResponse | null
+  ): boolean {
+    if (session && this.isSessionExpired(session)) {
+      return true;
+    }
+
+    if (error instanceof HttpErrorResponse) {
+      return [404, 408, 409, 410].includes(error.status) || this.isSessionMessageRetryable(error.message);
+    }
+
+    if (error instanceof Error) {
+      return this.isSessionMessageRetryable(error.message);
+    }
+
+    return false;
+  }
+
+  private isSessionMessageRetryable(message: string): boolean {
+    return /expired|invalid|ready to commit|no longer be valid/i.test(message);
+  }
+
+  private isStaleUploadTargetStatus(status: number): boolean {
+    return [403, 404, 409, 410].includes(status);
   }
 }

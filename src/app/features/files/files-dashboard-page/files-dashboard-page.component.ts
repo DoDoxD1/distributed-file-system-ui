@@ -4,7 +4,11 @@ import { DomSanitizer, type SafeResourceUrl } from '@angular/platform-browser';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 
-import { FileListingResponse, FileManifestResponse } from '../../../core/models/api.models';
+import {
+  type DirectFileUploadStatus,
+  FileListingResponse,
+  FileManifestResponse
+} from '../../../core/models/api.models';
 import { FileCacheService } from '../../../core/services/file-cache.service';
 import { FilesService } from '../../../core/services/files.service';
 import { ToastService } from '../../../core/services/toast.service';
@@ -14,7 +18,6 @@ import {
   buildFolderTree,
   extractFileName,
   extractParentFolder,
-  fileToBase64,
   triggerBrowserDownload
 } from '../../../core/utils/file.util';
 import { formatBytes, formatDateTime } from '../../../core/utils/format.util';
@@ -156,6 +159,16 @@ export class FilesDashboardPageComponent {
   protected readonly isLoadingPreview = signal(false);
   protected readonly uploadResult = signal<FileManifestResponse | null>(null);
   protected readonly uploadRequestKey = signal(createIdempotencyKey());
+  protected readonly uploadStatus = signal<DirectFileUploadStatus | null>(null);
+  protected readonly uploadProgress = signal(0);
+  protected readonly uploadRequestedPath = signal<string | null>(null);
+  protected readonly uploadResolvedPath = signal<string | null>(null);
+  protected readonly uploadSavedToDifferentPath = computed(() => {
+    const requestedPath = this.uploadRequestedPath();
+    const manifest = this.uploadResult();
+
+    return Boolean(requestedPath && manifest && requestedPath !== manifest.logicalPath);
+  });
   protected readonly isLoadingFiles = signal(true);
   protected readonly isUploading = signal(false);
   protected readonly uploadModalOpen = signal(false);
@@ -165,6 +178,40 @@ export class FilesDashboardPageComponent {
   protected readonly formatDateTime = formatDateTime;
   protected readonly getFileName = extractFileName;
   protected readonly getFolderPath = extractParentFolder;
+
+  protected get uploadStatusLabel(): string | null {
+    switch (this.uploadStatus()) {
+      case 'creating session':
+        return 'Preparing';
+      case 'uploading to storage':
+        return 'Uploading';
+      case 'finalizing':
+        return 'Syncing';
+      case 'complete':
+        return 'Complete';
+      case 'error':
+        return 'Error';
+      default:
+        return null;
+    }
+  }
+
+  protected get uploadActionLabel(): string {
+    if (!this.isUploading()) {
+      return 'Upload file';
+    }
+
+    switch (this.uploadStatus()) {
+      case 'creating session':
+        return 'Preparing…';
+      case 'uploading to storage':
+        return 'Uploading…';
+      case 'finalizing':
+        return 'Syncing…';
+      default:
+        return 'Uploading…';
+    }
+  }
 
   constructor() {
     void this.refreshFiles();
@@ -266,8 +313,7 @@ export class FilesDashboardPageComponent {
     const file = this.selectedUploadFile();
     if (!file) return '';
     const folder = this.uploadForm.controls.logicalPath.getRawValue();
-    const prefix = folder.endsWith('/') ? folder : folder + '/';
-    return prefix + file.name;
+    return this.buildUploadPath(folder, file.name);
   }
 
   protected handleUploadFileSelected(file: File): void {
@@ -283,8 +329,10 @@ export class FilesDashboardPageComponent {
     this.uploadForm.markAllAsTouched();
     this.uploadError.set('');
 
-    if (this.uploadForm.invalid || !this.selectedUploadFile()) {
-      if (!this.selectedUploadFile()) {
+    const selectedFile = this.selectedUploadFile();
+
+    if (this.uploadForm.invalid || !selectedFile) {
+      if (!selectedFile) {
         this.uploadError.set('Choose a file before uploading.');
       }
       return;
@@ -293,33 +341,80 @@ export class FilesDashboardPageComponent {
     this.isUploading.set(true);
 
     try {
-      const file = this.selectedUploadFile()!;
+      const file = selectedFile;
       const rawPath = this.uploadForm.controls.logicalPath.getRawValue().trim();
-      const normalizedPath = rawPath.endsWith('/')
-        ? rawPath + file.name
-        : rawPath;
-      const manifest = (
-        await firstValueFrom(
-          this.filesService.uploadFile({
-            logicalPath: normalizedPath,
-            payloadBase64: await fileToBase64(file),
-            idempotencyKey: this.uploadRequestKey()
-          })
-        )
-      ).manifest;
+      const normalizedPath = this.buildUploadPath(rawPath, file.name);
+
+      this.uploadRequestedPath.set(normalizedPath);
+      this.uploadResolvedPath.set(normalizedPath);
+      this.uploadStatus.set('creating session');
+      this.uploadProgress.set(0);
+
+      const manifest = await new Promise<FileManifestResponse>((resolve, reject) => {
+        let finalManifest: FileManifestResponse | null = null;
+
+        const subscription = this.filesService
+          .uploadFileDirect(file, normalizedPath, this.uploadRequestKey())
+          .subscribe({
+            next: (state) => {
+              this.uploadStatus.set(state.status);
+              this.uploadProgress.set(state.progress);
+              this.uploadResolvedPath.set(state.logicalPath);
+
+              if (state.manifest) {
+                finalManifest = state.manifest;
+              }
+            },
+            error: (error: unknown) => {
+              subscription.unsubscribe();
+              reject(error);
+            },
+            complete: () => {
+              subscription.unsubscribe();
+
+              if (finalManifest) {
+                resolve(finalManifest);
+                return;
+              }
+
+              reject(new Error('The upload completed without a saved file manifest.'));
+            }
+          });
+      });
 
       this.uploadResult.set(manifest);
+      this.uploadStatus.set('complete');
+      this.uploadProgress.set(100);
+      this.uploadResolvedPath.set(manifest.logicalPath);
       this.selectedUploadFile.set(null);
       this.uploadRequestKey.set(createIdempotencyKey());
       this.uploadModalOpen.set(false);
-      this.toast.success('Upload complete', `${extractFileName(manifest.logicalPath)} has been saved.`);
-      await Promise.all([
+      this.toast.success(
+        'Upload complete',
+        manifest.logicalPath === normalizedPath
+          ? `${extractFileName(manifest.logicalPath)} has been saved.`
+          : `${extractFileName(file.name)} was saved as ${manifest.logicalPath}.`
+      );
+
+      const cacheInvalidations: Promise<void>[] = [
         this.fileCache.invalidateListing(FilesDashboardPageComponent.LISTING_CACHE_KEY),
         this.fileCache.evictContent(manifest.logicalPath)
-      ]);
+      ];
+
+      if (manifest.logicalPath !== normalizedPath) {
+        cacheInvalidations.push(this.fileCache.evictContent(normalizedPath));
+      }
+
+      await Promise.all(cacheInvalidations);
       await this.refreshFiles();
+
+      const uploadedFile = this.files().find((item) => item.logicalPath === manifest.logicalPath);
+      if (uploadedFile) {
+        this.selectFile(uploadedFile);
+      }
     } catch (error) {
-      const message = getErrorMessage(error, 'The file could not be uploaded.');
+      const message = this.getUploadErrorMessage(error);
+      this.uploadStatus.set('error');
       this.uploadError.set(message);
       this.toast.error('Upload failed', message);
     } finally {
@@ -397,6 +492,10 @@ export class FilesDashboardPageComponent {
     this.uploadForm.reset({ logicalPath: prefix });
     this.selectedUploadFile.set(null);
     this.uploadError.set('');
+    this.uploadStatus.set(null);
+    this.uploadProgress.set(0);
+    this.uploadRequestedPath.set(null);
+    this.uploadResolvedPath.set(null);
     this.uploadModalOpen.set(true);
   }
 
@@ -405,6 +504,34 @@ export class FilesDashboardPageComponent {
       return;
     }
     this.uploadModalOpen.set(false);
+  }
+
+  private buildUploadPath(folderPath: string, fileName: string): string {
+    const trimmedPath = folderPath.trim();
+
+    if (!trimmedPath || trimmedPath === '/') {
+      return `/${fileName}`;
+    }
+
+    return `${trimmedPath.replace(/\/+$/, '')}/${fileName}`;
+  }
+
+  private getUploadErrorMessage(error: unknown): string {
+    const message = getErrorMessage(error, 'The file could not be uploaded right now.');
+
+    if (/expired|invalid|no longer be valid/i.test(message)) {
+      return 'The upload expired before it could finish. Please try again.';
+    }
+
+    if (/cancelled|canceled/i.test(message)) {
+      return 'The upload was canceled before it finished.';
+    }
+
+    if (/network|transfer|storage upload failed/i.test(message)) {
+      return 'The file transfer was interrupted. Please try again.';
+    }
+
+    return 'The file could not be uploaded right now. Please try again.';
   }
 
 }
