@@ -15,14 +15,14 @@ export const arrayBufferToBase64 = (buffer: ArrayBuffer): string => btoa(arrayBu
 
 export const fileToBase64 = async (file: File): Promise<string> => arrayBufferToBase64(await file.arrayBuffer());
 
-export const computeSha256Hex = async (file: File): Promise<string> => {
-  const buffer = await file.arrayBuffer();
+export const computeSha256Hex = async (input: File | ArrayBuffer): Promise<string> => {
+  const buffer = input instanceof File ? await input.arrayBuffer() : input;
   const hash = await crypto.subtle.digest('SHA-256', buffer);
 
   return Array.from(new Uint8Array(hash), (byte) => byte.toString(16).padStart(2, '0')).join('');
 };
 
-export const base64ToBlob = (base64: string, contentType = 'application/octet-stream'): Blob => {
+export const base64ToUint8Array = (base64: string): Uint8Array => {
   const binary = atob(base64);
   const bytes = new Uint8Array(binary.length);
 
@@ -30,7 +30,16 @@ export const base64ToBlob = (base64: string, contentType = 'application/octet-st
     bytes[index] = binary.charCodeAt(index);
   }
 
-  return new Blob([bytes], { type: contentType });
+  return bytes;
+};
+
+export const base64ToBlob = (base64: string, contentType = 'application/octet-stream'): Blob => {
+  const bytes = base64ToUint8Array(base64);
+  const normalizedBytes = new Uint8Array(bytes.length);
+
+  normalizedBytes.set(bytes);
+
+  return new Blob([normalizedBytes.buffer], { type: contentType });
 };
 
 export const triggerBrowserDownload = (filename: string, blob: Blob): void => {

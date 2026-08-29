@@ -83,7 +83,7 @@ export class DirectUploadPageComponent {
           logicalPath: this.sessionForm.controls.logicalPath.getRawValue().trim(),
           checksumSha256: checksum,
           sizeBytes: file.size,
-          contentType: file.type || 'application/octet-stream',
+          contentType: file.type || null,
           idempotencyKey: this.directUploadKey()
         })
       );
@@ -170,7 +170,21 @@ export class DirectUploadPageComponent {
       }
 
       this.uploadProgress.set(0);
-      await firstValueFrom(this.filesService.uploadToObjectStorage(session, file));
+      await new Promise<void>((resolve, reject) => {
+        const subscription = this.filesService.uploadToObjectStorage(session, file).subscribe({
+          next: (progress) => {
+            this.uploadProgress.set(progress);
+          },
+          error: (error: unknown) => {
+            subscription.unsubscribe();
+            reject(error);
+          },
+          complete: () => {
+            subscription.unsubscribe();
+            resolve();
+          }
+        });
+      });
       this.uploadProgress.set(100);
       this.toast.success('Upload finished', 'Your file transfer completed successfully.');
     }

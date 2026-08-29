@@ -53,12 +53,6 @@ export interface UpdateDisplayNameRequest {
   displayName: string;
 }
 
-export interface UploadFileRequest {
-  logicalPath: string;
-  payloadBase64: string;
-  idempotencyKey?: string;
-}
-
 export interface FileManifestResponse {
   fileId: string;
   ownerUserId: string;
@@ -83,8 +77,8 @@ export interface CreateDirectUploadSessionRequest {
   logicalPath: string;
   checksumSha256: string;
   sizeBytes: number;
-  contentType: string;
-  idempotencyKey?: string;
+  contentType: string | null;
+  idempotencyKey?: string | null;
 }
 
 export interface DirectUploadSessionResponse {
@@ -93,17 +87,33 @@ export interface DirectUploadSessionResponse {
   logicalPath: string;
   checksumSha256: string;
   sizeBytes: number;
-  contentType: string;
+  contentType: string | null;
   idempotencyKey: string | null;
-  stagingObjectKey: string;
+  stagingObjectKey: string | null;
   status: DirectUploadSessionStatus;
   committedVersionId: string | null;
   uploadRequired: boolean;
   uploadUrl: string | null;
-  uploadMethod: string;
+  uploadMethod: string | null;
   uploadHeaders: Record<string, string>;
   createdAt: string;
   expiresAt: string;
+}
+
+export type DirectFileUploadStatus =
+  | 'creating session'
+  | 'uploading to storage'
+  | 'finalizing'
+  | 'complete'
+  | 'error';
+
+export interface DirectFileUploadState {
+  status: DirectFileUploadStatus;
+  requestedLogicalPath: string;
+  logicalPath: string;
+  progress: number;
+  session: DirectUploadSessionResponse | null;
+  manifest: FileManifestResponse | null;
 }
 
 export interface DownloadFileResponse {
